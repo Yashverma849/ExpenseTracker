@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { supabase } from "@/lib/supabaseClient";
+import { Button } from "@headlessui/react";
 
 const chartConfig = {
   housing: {
@@ -33,22 +34,35 @@ const chartConfig = {
 export function HousingChartComponent() {
   const [chartData, setChartData] = React.useState([]);
 
-  React.useEffect(() => {
-    const fetchData = async () => {
-      const { data, error } = await supabase
-        .from("expenses")
-        .select("amount")
-        .eq("category", "Housing")
-      if (error) {
-        console.log("Error fetching data:", error);
-      } else {
-        const totalExpense = data.reduce((acc, expense) => acc + expense.amount, 0);
-        setChartData([{ name: "Housing", budget: totalExpense }]);
-      }
-    };
+  const fetchData = async () => {
+    const { data, error } = await supabase
+      .from("expenses")
+      .select("amount")
+      .eq("category", "Housing");
+    if (error) {
+      console.log("Error fetching data:", error);
+    } else {
+      const totalExpense = data.reduce((acc, expense) => acc + expense.amount, 0);
+      setChartData([{ name: "Housing", budget: totalExpense }]);
+    }
+  };
 
+  React.useEffect(() => {
     fetchData();
   }, []);
+
+  const handleClear = async () => {
+    const { error } = await supabase
+      .from("expenses")
+      .update({ amount: 0 })
+      .eq("category", "Housing");
+
+    if (error) {
+      console.log("Error clearing data:", error);
+    } else {
+      setChartData([{ name: "Housing", budget: 0 }]);
+    }
+  };
 
   return (
     <Card className="flex flex-col">
@@ -108,6 +122,16 @@ export function HousingChartComponent() {
             </PolarRadiusAxis>
           </RadialBarChart>
         </ChartContainer>
+        <strong className="flex justify-center text-center text-black text-sm mt-2">
+          Reset the Housing expense </strong>
+        <div className="flex justify-center mt-4">
+          <button
+            onClick={handleClear}
+            className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Clear
+          </button>
+        </div>
       </CardContent>
     </Card>
   );

@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { TrendingUp } from "lucide-react"
-import { supabase } from "@/lib/supabaseClient"
+import { useEffect, useState } from "react";
+import { TrendingUp } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 import {
   Label,
   PolarGrid,
   PolarRadiusAxis,
   RadialBar,
   RadialBarChart,
-} from "recharts"
+} from "recharts";
 
 import {
   Card,
@@ -18,25 +18,25 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { ChartConfig, ChartContainer } from "@/components/ui/chart"
+} from "@/components/ui/card";
+import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 const chartConfig = {
   safari: {
     label: "Safari",
     color: "hsl(var(--chart-2))",
   },
-}
+};
 
 export function FoodChartComponent() {
-  const [chartData, setChartData] = useState([])
+  const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       const { data, error } = await supabase
         .from("expenses")
         .select("amount")
-        .eq("category", "Food")
+        .eq("category", "Food");
       if (error) {
         console.log("Error fetching data:", error);
       } else {
@@ -47,6 +47,19 @@ export function FoodChartComponent() {
 
     fetchData();
   }, []);
+
+  const handleClear = async () => {
+    const { error } = await supabase
+      .from("expenses")
+      .update({ amount: 0 })
+      .eq("category", "Food");
+
+    if (error) {
+      console.log("Error clearing data:", error);
+    } else {
+      setChartData([{ name: "Food", budget: 0 }]);
+    }
+  };
 
   return (
     <Card className="flex flex-col">
@@ -99,14 +112,25 @@ export function FoodChartComponent() {
                           Expense
                         </tspan>
                       </text>
-                    )
+                    );
                   }
                 }}
               />
             </PolarRadiusAxis>
           </RadialBarChart>
         </ChartContainer>
+        <strong className="flex justify-center text-center text-black text-sm mt-2">
+            Reset the Food expense
+          </strong>
+        <div className="flex justify-center mt-4">
+          <button
+            onClick={handleClear}
+            className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Clear
+          </button>
+        </div>
       </CardContent>
     </Card>
-  )
+  );
 }

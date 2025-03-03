@@ -77,39 +77,27 @@ export default function Page() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="#">
-                    Building Your Application
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-        </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="flex justify-center grid grid-cols-1 md:grid-cols-3 gap-4 pl-4">
-            <div className="col-span-1 md:col-span-3">
-              <input type="file" onChange={handleFileChange} />
-              <button
-                onClick={handleUpload}
-                disabled={uploading}
-                className="mt-2 p-2 bg-blue-500 text-white rounded"
-              >
-                {uploading ? "Uploading..." : "Upload Receipt"}
-              </button>
+        <div
+          className="min-h-screen flex flex-col items-center justify-center p-4 bg-cover bg-center"
+          style={{ backgroundImage: "url('/pc.jpeg')" }}
+        >
+          <div className="w-full max-w-md">
+            <div
+              className="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-white/20"
+            >
+              <div className="bg-white bg-opacity-50 p-4 rounded-lg">
+                <h2 className="text-xl font-semibold mb-4 text-white">Upload Receipt</h2>
+                <input type="file" onChange={handleFileChange} className="w-full mb-4" />
+                <button
+                  onClick={handleUpload}
+                  disabled={uploading}
+                  className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  {uploading ? "Uploading..." : "Upload Receipt"}
+                </button>
+              </div>
             </div>
           </div>
-          <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" />
         </div>
       </SidebarInset>
     </SidebarProvider>
