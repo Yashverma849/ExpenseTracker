@@ -17,10 +17,18 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { Terminal } from "lucide-react";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 
 export default function Page() {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [showAlert, setShowAlert] = useState(false);
 
   useEffect(() => {
     const testConnection = async () => {
@@ -44,7 +52,12 @@ export default function Page() {
   };
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (!file) {
+      setAlertMessage("No file selected. Please select your receipt.");
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 3000); // Hide alert after 3 seconds
+      return;
+    }
 
     setUploading(true);
 
@@ -67,6 +80,10 @@ export default function Page() {
 
     if (dbError) {
       console.error("Error saving file URL to database:", dbError.message, dbError.details, dbError.hint);
+    } else {
+      setAlertMessage("Your receipt is successfully uploaded.");
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 3000); // Hide alert after 3 seconds
     }
 
     setUploading(false);
@@ -82,6 +99,15 @@ export default function Page() {
           style={{ backgroundImage: "url('/pc.jpeg')" }}
         >
           <div className="w-full max-w-md">
+            {showAlert && (
+              <Alert className="mb-4">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Alert</AlertTitle>
+                <AlertDescription>
+                  {alertMessage}
+                </AlertDescription>
+              </Alert>
+            )}
             <div
               className="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-white/20"
             >
