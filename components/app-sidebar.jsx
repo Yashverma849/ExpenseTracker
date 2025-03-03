@@ -5,6 +5,7 @@ import {
   SquareTerminal,
   PieChart,
   BookOpen,
+  DollarSign, // Import the icon for Expense
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -18,7 +19,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
-// Simplified data to only include Dashboard, Budget, and Receipts
+// Simplified data to only include Dashboard, Budget, Receipts, and Expense
 const data = {
   teams: [
     {
@@ -34,11 +35,15 @@ const data = {
       icon: PieChart,
       isActive: true,
     },
-    
     {
       title: "Receipts",
       url: "/receipts", // Update URL to point to the correct route
       icon: BookOpen,
+    },
+    {
+      title: "Expense",
+      url: "/expense", // Update URL to point to the correct route
+      icon: DollarSign,
     },
   ],
 };

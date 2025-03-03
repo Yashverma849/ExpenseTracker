@@ -16,6 +16,7 @@ function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
+  // fetching user session
   useEffect(() => {
     const getSession = async () => {
       try {
@@ -46,7 +47,7 @@ function Header() {
 
     return () => subscription?.unsubscribe();
   }, []);
-
+// click outside dropdown handling 
   const handleClickOutside = (event) => {
     if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
       setShowDropdown(false);
@@ -58,9 +59,11 @@ function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+//navigation handlers
   const handleLogoClick = () => router.push('/');
   const handleSignupClick = () => router.push('/signup');
 
+  //logout function
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -72,6 +75,7 @@ function Header() {
     }
   };
 
+//user avatar component
   const UserAvatar = () => (
     <div 
       className="relative cursor-pointer"
@@ -93,6 +97,7 @@ function Header() {
     </div>
   );
 
+//loading skeleton
   if (loading) {
     return (
       <div className='p-4 flex justify-between items-center border shadow-sm'>
@@ -102,6 +107,7 @@ function Header() {
     );
   }
 
+  //rendering header
   return (
     <div className='p-4 flex justify-between items-center border-b shadow-sm bg-white sticky top-0 z-50'>
       <Image 

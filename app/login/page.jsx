@@ -5,10 +5,12 @@ import Header from '../_components/Header';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function Login() {
+  //state variables
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
 
+  //handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -82,6 +84,7 @@ export default function Login() {
             {error && <div className="text-red-500 text-sm">{error}</div>}
 
             <div>
+
               <button
                 type="submit"
                 className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-indigo-500 hover:ring-2 hover:ring-indigo-500"
