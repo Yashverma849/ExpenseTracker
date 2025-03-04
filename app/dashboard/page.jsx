@@ -1,7 +1,7 @@
 // filepath: /c:/Users/verma/expensetracker/app/dashboard/page.jsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -26,17 +26,39 @@ import Header from '@/app/_components/Header'; // Correct import path
 
 export default function Page() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/'); // Redirect to homepage if not logged in
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        if (!data?.user) {
+          router.push('/'); // Redirect to homepage if not logged in
+        }
+      } catch (err) {
+        setError("Failed to authenticate. Please log in.");
+        console.error("Authentication error:", err.message);
+      } finally {
+        setLoading(false);
       }
     };
 
     checkUser();
   }, [router]);
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col justify-center items-center h-screen">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
