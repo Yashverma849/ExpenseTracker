@@ -2,17 +2,17 @@
 const nextConfig = {
     reactStrictMode: true,
     images: {
-      domains: ['https://expensetracker-tau-liard.vercel.app/'], // Add your image domains here
+      domains: ['https://finzarc-expensetracker.vercel.app/'], // Add your image domains here
     },
-    async redirects() {
-      return [
-        {
-          source: '/',
-          destination: '/dashboard',
-          permanent: true,
-        },
-      ];
-    },
+    // async redirects() {
+    //   return [
+    //     {
+    //       source: '/',
+    //       destination: '/dashboard',
+    //       permanent: false,
+    //     },
+    //   ];
+    // },
   };
   
   export default nextConfig;
