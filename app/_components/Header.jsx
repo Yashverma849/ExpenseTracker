@@ -1,164 +1,54 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import React from 'react';
 import Image from 'next/image';
-import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabaseClient';
-import Skeleton from 'react-loading-skeleton';
-import 'react-loading-skeleton/dist/skeleton.css';
+import { supabase } from '@/lib/supabaseClient';
+import { Header } from '@/app/_components/Header';
 
-function Header() {
+function Hero() {
   const router = useRouter();
-  const [session, setSession] = useState(null);
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef(null);
 
-  // fetching user session
-  useEffect(() => {
-    const getSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        if (session) {
-          const { data: { user } } = await supabase.auth.getUser();
-          setUser(user);
-        }
-      } catch (error) {
-        console.error('Error fetching session:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      if (session) {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
-      } else {
-        setUser(null);
-      }
-    });
-
-    getSession();
-
-    return () => subscription?.unsubscribe();
-  }, []);
-// click outside dropdown handling 
-  const handleClickOutside = (event) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      setShowDropdown(false);
+  const handleGetStarted = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      // User is signed in, redirect to dashboard
+      router.push('/dashboard');
+    } else {
+      // User is not signed in, redirect to sign-in page
+      router.push('/signup');
     }
   };
 
-  useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-//navigation handlers
-  const handleLogoClick = () => router.push('/');
-  const handleSignupClick = () => router.push('/signup');
-
-  //logout function
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      router.push('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setShowDropdown(false);
-    }
-  };
-
-//user avatar component
-  const UserAvatar = () => (
-    <div 
-      className="relative cursor-pointer"
-      onClick={() => setShowDropdown(!showDropdown)}
-    >
-      {user?.user_metadata?.avatar_url ? (
-        <Image
-          src={user.user_metadata.avatar_url}
-          alt="User avatar"
-          width={40}
-          height={40}
-          className="rounded-full border-2 border-gray-200"
-        />
-      ) : (
-        <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-medium">
-          {user?.email?.[0]?.toUpperCase() || 'U'}
-        </div>
-      )}
-    </div>
-  );
-
-//loading skeleton
-  if (loading) {
-    return (
-      <div className='p-4 flex justify-between items-center border shadow-sm'>
-        <Skeleton height={40} width={100} />
-        <Skeleton height={40} width={100} />
-      </div>
-    );
-  }
-
-  //rendering header
   return (
-    <div className='p-4 flex justify-between items-center border-b shadow-sm bg-white sticky top-0 z-50'>
-      <Image 
-        src="/Finzarc-removebg-preview.png" 
-        alt="logo" 
-        width={120} 
-        height={40} 
-        onClick={handleLogoClick} 
-        className="cursor-pointer hover:opacity-80 transition-opacity"
-        priority
-      />
+    <section className="bg-gray-50 flex items-center flex-col pb-16">
+      <Header /> {/* Include the Header component here */}
+      <div className="mx-auto max-w-screen-xl px-4 py-32 m:flex m:h-screen m:items-center">
+        <div className="mx-auto max-w-xl text-center">
+          <h1 className="text-3xl font-extrabold sm:text-5xl">
+            Get A Quick 
+            <strong className="font-extrabold text-primary sm:block"> Overview Of Your Expenses. </strong>
+          </h1>
 
-      <div className="flex items-center gap-4" ref={dropdownRef}>
-        {session ? (
-          <>
-            <div className="hidden md:flex flex-col items-end">
-              <p className="font-medium text-gray-800">
-                {user?.user_metadata?.first_name || 'User'}
-              </p>
-              <p className="text-sm text-gray-500">
-                {user?.email}
-              </p>
-            </div>
-            <UserAvatar />
-            
-            {showDropdown && (
-              <div className="absolute top-16 right-4 bg-white rounded-lg shadow-lg border p-2 w-48">
-                <div className="p-2 text-sm text-gray-700">
-                  {user?.email}
-                </div>
-                <hr className="my-1" />
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left p-2 text-sm hover:bg-gray-100 rounded-md text-red-600"
-                >
-                  Log Out
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
-          <Button 
-            onClick={handleSignupClick}
-            className="px-6 py-2 rounded-full hover:bg-indigo-700 transition-colors"
-          >
-            Sign Up
-          </Button>
-        )}
+          <p className="mt-4 sm:text-xl/relaxed">
+            Get Detailed Analysis About Your Expenses.
+          </p>
+
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <button
+              className="block w-full rounded-sm bg-primary px-12 py-3 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:ring-3 focus:outline-hidden sm:w-auto"
+              onClick={handleGetStarted}
+            >
+              Get Started
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+      <div className="flex justify-center w-full pb-16">
+        <Image src="/Screenshot 2025-02-22 041333.png" alt="logo" width={1000} height={1000} />
+      </div>
+    </section>
   );
 }
 
-export default Header;
+export default Hero;
