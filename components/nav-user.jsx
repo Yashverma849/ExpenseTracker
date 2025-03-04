@@ -5,12 +5,13 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation"; 
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
+import crypto from "crypto";
 
 // Generate Gravatar URL based on email hash
 const getGravatarUrl = (email) => {
   if (!email) return "/default-avatar.png"; 
-  const emailHash = new TextEncoder().encode(email.trim().toLowerCase());
-  return `https://www.gravatar.com/avatar/${btoa(emailHash)}?d=identicon`;
+  const emailHash = crypto.createHash('md5').update(email.trim().toLowerCase()).digest('hex');
+  return `https://www.gravatar.com/avatar/${emailHash}?d=identicon`;
 };
 
 function NavUserComponent() {
@@ -72,7 +73,7 @@ function NavUserComponent() {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <span className="truncate font-semibold">{user?.user_metadata?.first_name || 'User'}</span>
+      <span className="truncate font-semibold">{user.name || 'User'}</span>
       
       <Button onClick={handleLogout} className="btn btn-secondary mt-2">Logout</Button>
     </div>
