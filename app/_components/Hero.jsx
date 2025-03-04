@@ -4,7 +4,6 @@ import React from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import { Header } from '@/app/_components/Header';
 
 function Hero() {
   const router = useRouter();

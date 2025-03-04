@@ -23,6 +23,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
+import UserExpenses from "@/app/_components/UserExpenses";
 
 export default function ExpensePage() {
   const [amount, setAmount] = useState("");
@@ -36,7 +37,14 @@ export default function ExpensePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error("User not authenticated");
+      return;
+    }
+
     const newExpense = {
+      user_id: user.id,
       from_account: fromAccount,
       amount: parseFloat(amount),
       currency,
@@ -148,6 +156,7 @@ export default function ExpensePage() {
                 </form>
               </div>
             </div>
+            <UserExpenses />
           </div>
         </div>
       </SidebarInset>
