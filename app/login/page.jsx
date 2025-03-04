@@ -16,16 +16,20 @@ export default function Login() {
   // handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Form submitted');
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      console.error('Error signing in:', error.message);
       setError(error.message);
     } else {
       // Check if the user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        console.log('User authenticated:', user);
         // Redirect to dashboard
         router.push('/dashboard');
       } else {
+        console.error('Failed to authenticate user.');
         setError('Failed to authenticate user.');
       }
     }
