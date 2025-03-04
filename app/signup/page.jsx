@@ -1,9 +1,10 @@
-"use client"; // Add this directive at the top
+"use client";
 
 import React, { useState } from 'react';
 import Header from '../_components/Header';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabaseClient';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 function Signup() {
   const [firstName, setFirstName] = useState('');
@@ -12,6 +13,8 @@ function Signup() {
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [error, setError] = useState(null);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,8 +28,7 @@ function Signup() {
       password,
       options: {
         data: {
-          first_name: firstName,
-          last_name: lastName,
+          full_name: `${firstName} ${lastName}`,
         },
       },
     });
@@ -34,8 +36,12 @@ function Signup() {
     if (error) {
       setError(error.message);
     } else {
-      // Redirect to the login page or home page
-      window.location.href = '/login';
+      setAlertMessage("Account created successfully!");
+      setShowAlert(true);
+      setTimeout(() => {
+        setShowAlert(false);
+        window.location.href = '/dashboard';
+      }, 2000); // Redirect after 2 seconds
     }
   };
 
@@ -145,6 +151,14 @@ function Signup() {
           </div>
         </main>
       </div>
+      {showAlert && (
+        <Alert className="mb-4">
+          <AlertTitle>Success</AlertTitle>
+          <AlertDescription>
+            {alertMessage}
+          </AlertDescription>
+        </Alert>
+      )}
     </section>
   );
 }
