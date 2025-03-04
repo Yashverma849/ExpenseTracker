@@ -1,16 +1,25 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 function Hero() {
   const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const handleGetStarted = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsAuthenticated(!!user);
+    };
+
+    checkUser();
+  }, []);
+
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
       // User is signed in, redirect to dashboard
       router.push('/dashboard');
     } else {

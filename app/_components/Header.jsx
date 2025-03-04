@@ -5,18 +5,15 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
-import Skeleton from 'react-loading-skeleton';
-import 'react-loading-skeleton/dist/skeleton.css';
 
 function Header() {
   const router = useRouter();
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
-  // fetching user session
+  // Fetching user session
   useEffect(() => {
     const getSession = async () => {
       try {
@@ -28,8 +25,6 @@ function Header() {
         }
       } catch (error) {
         console.error('Error fetching session:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -47,7 +42,8 @@ function Header() {
 
     return () => subscription?.unsubscribe();
   }, []);
-// click outside dropdown handling 
+
+  // Click outside dropdown handling 
   const handleClickOutside = (event) => {
     if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
       setShowDropdown(false);
@@ -59,11 +55,11 @@ function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-//navigation handlers
+  // Navigation handlers
   const handleLogoClick = () => router.push('/');
   const handleSignupClick = () => router.push('/signup');
 
-  //logout function
+  // Logout function
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -75,7 +71,7 @@ function Header() {
     }
   };
 
-//user avatar component
+  // User avatar component
   const UserAvatar = () => (
     <div 
       className="relative cursor-pointer"
@@ -97,17 +93,6 @@ function Header() {
     </div>
   );
 
-//loading skeleton
-  if (loading) {
-    return (
-      <div className='p-4 flex justify-between items-center border shadow-sm'>
-        <Skeleton height={40} width={100} />
-        <Skeleton height={40} width={100} />
-      </div>
-    );
-  }
-
-  //rendering header
   return (
     <div className='p-4 flex justify-between items-center border-b shadow-sm bg-white sticky top-0 z-50'>
       <Image 
@@ -123,20 +108,12 @@ function Header() {
       <div className="flex items-center gap-4" ref={dropdownRef}>
         {session ? (
           <>
-            <div className="hidden md:flex flex-col items-end">
-              <p className="font-medium text-gray-800">
-                {user?.user_metadata?.first_name || 'User'}
-              </p>
-              <p className="text-sm text-gray-500">
-                {user?.email}
-              </p>
-            </div>
             <UserAvatar />
             
             {showDropdown && (
               <div className="absolute top-16 right-4 bg-white rounded-lg shadow-lg border p-2 w-48">
                 <div className="p-2 text-sm text-gray-700">
-                  {user?.email}
+                  {user?.user_metadata?.first_name || 'User'}
                 </div>
                 <hr className="my-1" />
                 <button
