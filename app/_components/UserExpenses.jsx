@@ -26,6 +26,28 @@ function UserExpenses() {
     };
 
     fetchExpenses();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data, error } = await supabase
+            .from('expenses')
+            .select('*')
+            .eq('user_id', user.id);
+
+          if (error) {
+            console.error('Error fetching expenses:', error);
+          } else {
+            setExpenses(data);
+          }
+        }
+      } else {
+        setExpenses([]);
+      }
+    });
+
+    return () => subscription?.unsubscribe();
   }, []);
 
   if (loading) {

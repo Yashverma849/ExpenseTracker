@@ -33,6 +33,7 @@ export default function ExpensePage() {
   const [category, setCategory] = useState("Food");
   const [note, setNote] = useState("");
   const [showAlert, setShowAlert] = useState(false);
+  const [refreshExpenses, setRefreshExpenses] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,6 +62,7 @@ export default function ExpensePage() {
       console.log("New expense added:", data);
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 3000); // Hide alert after 3 seconds
+      setRefreshExpenses(!refreshExpenses); // Trigger re-fetch of expenses
     }
   };
 
@@ -156,7 +158,7 @@ export default function ExpensePage() {
                 </form>
               </div>
             </div>
-            <UserExpenses />
+            <UserExpenses refresh={refreshExpenses} />
           </div>
         </div>
       </SidebarInset>

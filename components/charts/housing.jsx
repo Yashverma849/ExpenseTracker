@@ -16,9 +16,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ChartConfig, ChartContainer } from "@/components/ui/chart";
+import { ChartContainer } from "@/components/ui/chart";
 import { supabase } from "@/lib/supabaseClient";
-import { Button } from "@headlessui/react";
 
 const chartConfig = {
   housing: {
@@ -35,15 +34,20 @@ export function HousingChartComponent() {
   const [chartData, setChartData] = React.useState([]);
 
   const fetchData = async () => {
-    const { data, error } = await supabase
-      .from("expenses")
-      .select("amount")
-      .eq("category", "Housing");
-    if (error) {
-      console.log("Error fetching data:", error);
-    } else {
-      const totalExpense = data.reduce((acc, expense) => acc + expense.amount, 0);
-      setChartData([{ name: "Housing", budget: totalExpense }]);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("amount")
+        .eq("category", "Housing")
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.log("Error fetching data:", error);
+      } else {
+        const totalExpense = data.reduce((acc, expense) => acc + expense.amount, 0);
+        setChartData([{ name: "Housing", budget: totalExpense }]);
+      }
     }
   };
 
@@ -52,15 +56,19 @@ export function HousingChartComponent() {
   }, []);
 
   const handleClear = async () => {
-    const { error } = await supabase
-      .from("expenses")
-      .update({ amount: 0 })
-      .eq("category", "Housing");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { error } = await supabase
+        .from("expenses")
+        .update({ amount: 0 })
+        .eq("category", "Housing")
+        .eq("user_id", user.id);
 
-    if (error) {
-      console.log("Error clearing data:", error);
-    } else {
-      setChartData([{ name: "Housing", budget: 0 }]);
+      if (error) {
+        console.log("Error clearing data:", error);
+      } else {
+        setChartData([{ name: "Housing", budget: 0 }]);
+      }
     }
   };
 
@@ -123,7 +131,8 @@ export function HousingChartComponent() {
           </RadialBarChart>
         </ChartContainer>
         <strong className="flex justify-center text-center text-black text-sm mt-2">
-          Reset the Housing expense </strong>
+          Reset the Housing expense
+        </strong>
         <div className="flex justify-center mt-4">
           <button
             onClick={handleClear}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TrendingUp } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import {
   Label,
@@ -15,11 +14,10 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ChartConfig, ChartContainer } from "@/components/ui/chart";
+import { ChartContainer } from "@/components/ui/chart";
 
 const chartConfig = {
   safari: {
@@ -33,15 +31,20 @@ export function FoodChartComponent() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data, error } = await supabase
-        .from("expenses")
-        .select("amount")
-        .eq("category", "Food");
-      if (error) {
-        console.log("Error fetching data:", error);
-      } else {
-        const totalExpense = data.reduce((acc, expense) => acc + expense.amount, 0);
-        setChartData([{ name: "Food", budget: totalExpense }]);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from("expenses")
+          .select("amount")
+          .eq("category", "Food")
+          .eq("user_id", user.id);
+
+        if (error) {
+          console.log("Error fetching data:", error);
+        } else {
+          const totalExpense = data.reduce((acc, expense) => acc + expense.amount, 0);
+          setChartData([{ name: "Food", budget: totalExpense }]);
+        }
       }
     };
 
@@ -49,15 +52,19 @@ export function FoodChartComponent() {
   }, []);
 
   const handleClear = async () => {
-    const { error } = await supabase
-      .from("expenses")
-      .update({ amount: 0 })
-      .eq("category", "Food");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { error } = await supabase
+        .from("expenses")
+        .update({ amount: 0 })
+        .eq("category", "Food")
+        .eq("user_id", user.id);
 
-    if (error) {
-      console.log("Error clearing data:", error);
-    } else {
-      setChartData([{ name: "Food", budget: 0 }]);
+      if (error) {
+        console.log("Error clearing data:", error);
+      } else {
+        setChartData([{ name: "Food", budget: 0 }]);
+      }
     }
   };
 
@@ -120,8 +127,8 @@ export function FoodChartComponent() {
           </RadialBarChart>
         </ChartContainer>
         <strong className="flex justify-center text-center text-black text-sm mt-2">
-            Reset the Food expense
-          </strong>
+          Reset the Food expense
+        </strong>
         <div className="flex justify-center mt-4">
           <button
             onClick={handleClear}
