@@ -2,7 +2,9 @@
 
 # dependencies
 /node_modules
+
 /.pnp
+supabase/
 .pnp.*
 .yarn/*
 !.yarn/patches
