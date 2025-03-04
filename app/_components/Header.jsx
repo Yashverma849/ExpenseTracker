@@ -99,7 +99,7 @@ function Header() {
         src="/Finzarc-removebg-preview.png" 
         alt="logo" 
         width={120} 
-        height={40} 
+        height={2} 
         onClick={handleLogoClick} 
         className="cursor-pointer hover:opacity-80 transition-opacity"
         priority
