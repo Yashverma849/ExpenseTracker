@@ -10,7 +10,6 @@ function Header() {
   const router = useRouter();
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -26,8 +25,6 @@ function Header() {
         }
       } catch (error) {
         console.error('Error fetching session:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -96,23 +93,6 @@ function Header() {
     </div>
   );
 
-  if (loading) {
-    return (
-      <div className='p-4 flex justify-between items-center border-b shadow-sm bg-white sticky top-0 z-50'>
-        <Image 
-          src="/Finzarc-removebg-preview.png" 
-          alt="logo" 
-          width={120} 
-          height={40} 
-          onClick={handleLogoClick} 
-          className="cursor-pointer hover:opacity-80 transition-opacity"
-          priority
-        />
-        <div>Loading...</div>
-      </div>
-    );
-  }
-
   return (
     <div className='p-4 flex justify-between items-center border-b shadow-sm bg-white sticky top-0 z-50'>
       <Image 
@@ -128,7 +108,12 @@ function Header() {
       <div className="flex items-center gap-4" ref={dropdownRef}>
         {session ? (
           <>
-            <UserAvatar />
+            <div 
+              className="relative cursor-pointer"
+              onClick={() => setShowDropdown(!showDropdown)}
+            >
+              {user?.user_metadata?.first_name || 'User'}
+            </div>
             
             {showDropdown && (
               <div className="absolute top-16 right-4 bg-white rounded-lg shadow-lg border p-2 w-48">
