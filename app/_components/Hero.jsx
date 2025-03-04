@@ -4,7 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import Header from '@/app/_components/Header';
+import { Header } from '@/app/_components/Header';
 
 function Hero() {
   const router = useRouter();
@@ -22,7 +22,6 @@ function Hero() {
 
   return (
     <section className="bg-gray-50 flex items-center flex-col pb-16">
-      <Header /> {/* Include the Header component here */}
       <div className="mx-auto max-w-screen-xl px-4 py-32 m:flex m:h-screen m:items-center">
         <div className="mx-auto max-w-xl text-center">
           <h1 className="text-3xl font-extrabold sm:text-5xl">
