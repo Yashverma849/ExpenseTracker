@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   Breadcrumb,
@@ -20,6 +23,19 @@ import { Piechartcomponent } from "@/components/charts/piechart";
 import { FoodChartComponent } from "@/components/charts/food";
 
 export default function Page() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/'); // Redirect to homepage if not logged in
+      }
+    };
+
+    checkUser();
+  }, [router]);
+
   return (
     <SidebarProvider>
       <AppSidebar />
