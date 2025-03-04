@@ -72,8 +72,8 @@ function NavUserComponent() {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <span className="truncate font-semibold">{user.name}</span>
-      <span className="truncate text-sm text-gray-500">{user.email}</span>
+      <span className="truncate font-semibold">{user?.user_metadata?.first_name || 'User'}</span>
+      
       <Button onClick={handleLogout} className="btn btn-secondary mt-2">Logout</Button>
     </div>
   );
