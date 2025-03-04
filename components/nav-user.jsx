@@ -73,7 +73,7 @@ function NavUserComponent() {
   return (
     <div className="flex items-center gap-4">
       <span className="truncate font-semibold">{user.name}</span>
-      <button onClick={handleLogout} className="btn btn-secondary">Logout</button>
+      <Button onClick={handleLogout} className="btn btn-secondary">Logout</Button>
     </div>
   );
 }
