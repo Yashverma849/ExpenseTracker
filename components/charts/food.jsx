@@ -29,43 +29,55 @@ const chartConfig = {
 
 export function FoodChartComponent() {
   const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from("expenses")
-          .select("amount")
-          .eq("category", "Food")
-          .eq("user_id", user.id);
-
-        if (error) {
-          console.log("Error fetching data:", error);
-        } else {
-          const totalExpense = data.reduce((acc, expense) => acc + expense.amount, 0);
-          setChartData([{ name: "Food", budget: totalExpense }]);
-        }
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError || !userData?.user) {
+        console.error("User not authenticated", authError?.message);
+        setLoading(false);
+        return;
       }
+
+      const user = userData.user;
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("amount")
+        .eq("category", "Food")
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.log("Error fetching data:", error);
+      } else {
+        const totalExpense = data.reduce((acc, expense) => acc + expense.amount, 0);
+        setChartData([{ name: "Food", budget: totalExpense }]);
+      }
+
+      setLoading(false);
     };
 
     fetchData();
   }, []);
 
   const handleClear = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { error } = await supabase
-        .from("expenses")
-        .delete()
-        .eq("category", "Food")
-        .eq("user_id", user.id);
+    const { data: userData, error: authError } = await supabase.auth.getUser();
+    if (authError || !userData?.user) {
+      console.error("User not authenticated", authError?.message);
+      return;
+    }
 
-      if (error) {
-        console.log("Error clearing data:", error);
-      } else {
-        setChartData([{ name: "Food", budget: 0 }]);
-      }
+    const user = userData.user;
+    const { error } = await supabase
+      .from("expenses")
+      .delete()
+      .eq("category", "Food")
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.log("Error clearing data:", error);
+    } else {
+      setChartData([{ name: "Food", budget: 0 }]);
     }
   };
 
@@ -78,7 +90,7 @@ export function FoodChartComponent() {
       <CardContent className="flex-1 pb-0">
         <ChartContainer
           config={chartConfig}
-          className="mx-auto  aspect-square max-h-[250px]"
+          className="mx-auto aspect-square max-h-[250px]"
         >
           <RadialBarChart
             data={chartData}
@@ -134,7 +146,7 @@ export function FoodChartComponent() {
         <div className="flex justify-center mt-4">
           <Button
             onClick={handleClear}
-            className=" hover:bg-red-600 text-white dm-serif-text-regular"
+            className="hover:bg-red-600 text-white dm-serif-text-regular"
           >
             RESET
           </Button>

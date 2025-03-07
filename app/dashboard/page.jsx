@@ -1,3 +1,4 @@
+// filepath: c:\Users\verma\expensetracker\app\dashboard\page.jsx
 "use client";
 
 import { useEffect, useState } from "react";

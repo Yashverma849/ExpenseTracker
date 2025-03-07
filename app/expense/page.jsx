@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import List from "@/app/expense/list";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"; // Ensure correct import
 import { AppSidebar } from "@/components/app-sidebar";
 import Image from "next/image";
 import {
@@ -13,32 +15,28 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { Terminal } from "lucide-react";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import List from "./list"; // Ensure correct import
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Terminal } from "react-feather";
 
 export default function ExpensePage() {
+  const [refreshExpenses, setRefreshExpenses] = useState(false);
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("INR");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [category, setCategory] = useState("Food");
   const [note, setNote] = useState("");
-  const [fromAccount, setFromAccount] = useState("Cash"); // Default account
+  const [fromAccount, setFromAccount] = useState("Cash");
   const [showAlert, setShowAlert] = useState(false);
-  const [refreshExpenses, setRefreshExpenses] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate amount
+    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
+      console.error("Invalid amount");
+      return;
+    }
 
     const { data: userData, error: authError } = await supabase.auth.getUser();
     if (authError || !userData?.user) {
@@ -53,7 +51,7 @@ export default function ExpensePage() {
       date,
       category,
       note,
-      from_account: fromAccount, // Ensure this field is included
+      from_account: fromAccount,
     };
 
     const { data, error } = await supabase.from("expenses").insert([newExpense]);
@@ -65,6 +63,13 @@ export default function ExpensePage() {
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 3000); // Hide alert after 3 seconds
       setRefreshExpenses((prev) => !prev); // Trigger re-fetch of expenses
+      // Reset form fields
+      setAmount("");
+      setCurrency("INR");
+      setDate(new Date().toISOString().split("T")[0]);
+      setCategory("Food");
+      setNote("");
+      setFromAccount("Cash");
     }
   };
 

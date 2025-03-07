@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { AppSidebar } from "@/components/app-sidebar";
+import ReceiptsList from "@/app/receipts/receiptlist"; // Import ReceiptsList
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -74,7 +75,7 @@ export default function Page() {
       return;
     }
 
-    const fileUrl = data.path;
+    const fileUrl = `https://ylpeqmpzkuupjntuweos.supabase.co/storage/v1/object/public/Receipts/${fileName}`;
 
     const { error: dbError } = await supabase
       .from("receipts")
@@ -163,7 +164,8 @@ export default function Page() {
                     </button>
                   </div>
                 </div>
-                
+                {/* Receipts List Component */}
+                <ReceiptsList refreshReceipts={refreshReceipts} />
               </div>
             </div>
           </div>

@@ -19,11 +19,18 @@ export default function List({ refresh }) {
       }
 
       const user = userData.user;
-      const { data, error } = await supabase.from("expenses").select("*").eq("user_id", user.id).order("date", { ascending: false });
+      console.log("Authenticated user:", user); // Debugging log
+
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("date", { ascending: false });
 
       if (error) {
         console.error("Error fetching expenses:", error.message, error.details, error.hint);
       } else {
+        console.log("Fetched expenses:", data); // Debugging log
         setExpenses(data || []);
       }
 
