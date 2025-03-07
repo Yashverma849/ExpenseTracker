@@ -30,6 +30,7 @@ export default function Page() {
   const [uploading, setUploading] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [showAlert, setShowAlert] = useState(false);
+  const [refreshReceipts, setRefreshReceipts] = useState(false);
 
   useEffect(() => {
     const testConnection = async () => {
@@ -85,6 +86,7 @@ export default function Page() {
       setAlertMessage("Your receipt is successfully uploaded.");
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 3000); // Hide alert after 3 seconds
+      setRefreshReceipts(!refreshReceipts); // Trigger re-fetch of receipts
     }
 
     setUploading(false);
@@ -138,7 +140,7 @@ export default function Page() {
               </header>
               <div className="w-full max-w-md flex flex-col items-center justify-center">
                 {showAlert && (
-                  <Alert className="mb-4 flex items-center bg-black text-white dm-serif-text-regular-italic">
+                  <Alert className="mb-4 flex items-center bg-transparent text-white dm-serif-text-regular-italic">
                     <Terminal className="h-4 w-4 flex justify-center" />
                     <AlertTitle className="text-white">Alert</AlertTitle>
                     <AlertDescription className="text-white">
@@ -147,9 +149,9 @@ export default function Page() {
                   </Alert>
                 )}
                 <div
-                  className="flex justify-center bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-black/20"
+                  className="flex justify-center bg-transparent bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-white/20"
                 >
-                  <div className=" bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-black/20 bg-opacity-50 p-4 rounded-lg">
+                  <div className="bg-transparent bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-white/20 bg-opacity-50 p-4 rounded-lg">
                     <h2 className="text-xxl font-bold mb-4 text-white dm-serif-text-regular chart-colors">UPLOAD RECEIPT</h2>
                     <input type="file" onChange={handleFileChange} className="w-full mb-4 text-white" />
                     <button
@@ -161,6 +163,7 @@ export default function Page() {
                     </button>
                   </div>
                 </div>
+                
               </div>
             </div>
           </div>

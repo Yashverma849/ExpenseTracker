@@ -40,14 +40,14 @@ export default function ExpensePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error("User not authenticated");
+    const { data: userData, error: authError } = await supabase.auth.getUser();
+    if (authError || !userData?.user) {
+      console.error("User not authenticated", authError?.message);
       return;
     }
 
     const newExpense = {
-      user_id: user.id,
+      user_id: userData.user.id,
       amount: parseFloat(amount),
       currency,
       date,
@@ -64,7 +64,7 @@ export default function ExpensePage() {
       console.log("New expense added:", data);
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 3000); // Hide alert after 3 seconds
-      setRefreshExpenses(!refreshExpenses); // Trigger re-fetch of expenses
+      setRefreshExpenses((prev) => !prev); // Trigger re-fetch of expenses
     }
   };
 
@@ -184,10 +184,7 @@ export default function ExpensePage() {
                               onChange={(e) => setNote(e.target.value)}
                             />
                           </div>
-                          <Button
-                            type="submit"
-                            className="w-full dm-serif-text-regular-italic text-white py-1 rounded hover:bg-blue-600"
-                          >
+                          <Button type="submit" className="w-full dm-serif-text-regular-italic text-white py-1 rounded hover:bg-blue-600">
                             Add Expense
                           </Button>
                         </form>
