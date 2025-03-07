@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { AppSidebar } from "@/components/app-sidebar";
+import Image from "next/image";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -23,15 +24,16 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
-import UserExpenses from "@/app/_components/UserExpenses";
+import { Button } from "@/components/ui/button";
+import List from "./list"; // Ensure correct import
 
 export default function ExpensePage() {
   const [amount, setAmount] = useState("");
-  const [fromAccount, setFromAccount] = useState("Total Budget");
   const [currency, setCurrency] = useState("INR");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [category, setCategory] = useState("Food");
   const [note, setNote] = useState("");
+  const [fromAccount, setFromAccount] = useState("Cash"); // Default account
   const [showAlert, setShowAlert] = useState(false);
   const [refreshExpenses, setRefreshExpenses] = useState(false);
 
@@ -46,12 +48,12 @@ export default function ExpensePage() {
 
     const newExpense = {
       user_id: user.id,
-      from_account: fromAccount,
       amount: parseFloat(amount),
       currency,
       date,
       category,
       note,
+      from_account: fromAccount, // Ensure this field is included
     };
 
     const { data, error } = await supabase.from("expenses").insert([newExpense]);
@@ -68,116 +70,136 @@ export default function ExpensePage() {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar className="bg-transparent backdrop-blur-lg border-r border-white/20" />
       <SidebarInset>
-      <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="#">
-                    Building Your Application
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-        </header>
-        <div
-          className="min-h-screen flex flex-col items-center justify-center p-4 bg-cover bg-center"
-          style={{ backgroundImage: "url('/pc.jpeg')" }}
-        >
-          <div className="w-full max-w-md">
-            {showAlert && (
-              <Alert className="mb-4">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Success!</AlertTitle>
-                <AlertDescription>
-                  Expense added successfully!
-                </AlertDescription>
-              </Alert>
-            )}
-            <div
-              className="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-white/20"
-            >
-              <div className="bg-white bg-opacity-50 p-4 rounded-lg">
-                <h2 className="text-xl font-semibold mb-4 text-white">Add New Expense</h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-white">From</label>
-                    <select
-                      className="w-full border px-3 py-2 rounded mt-1 bg-transparent text-white"
-                      value={fromAccount}
-                      onChange={(e) => setFromAccount(e.target.value)}
-                    >
-                      <option className="text-black">Total Budget</option>
-                    </select>
+        <div className="relative flex justify-center w-full pb-16">
+          <Image 
+            src="/pexels-adrien-olichon-1257089-2387793.jpg" 
+            alt="logo" 
+            layout="fill" 
+            objectFit="cover" 
+            className="absolute inset-0 z-0" 
+          />
+          <div className="relative z-10 w-full">
+            <div className="min-h-screen flex flex-col items-center justify-center">
+              <header className="flex h-16 items-center gap-2 m-4 bg-transparent backdrop-blur-lg shadow-lg rounded-lg p-4 border border-white/20 text-white">
+                <div className="flex items-center gap-2 px-4 text-white">
+                  <SidebarTrigger className="-ml-1 text-white hover:bg-white/10 p-2 rounded-lg transition-colors" />
+                  <Separator orientation="vertical" className="mr-2 h-4 bg-white/30" />
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem className=" md:block">
+                        <BreadcrumbLink 
+                          href="#" 
+                          className="text-white transition-colors text-sm font-medium"
+                        >
+                          Building Your Application
+                        </BreadcrumbLink>
+                      </BreadcrumbItem>
+                      <BreadcrumbSeparator className="hidden md:block text-white" />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage className="text-white text-sm font-semibold">
+                          Data Fetching
+                        </BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
+              </header>
+              <div className="p-4 w-full max-w-4xl">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-full">
+                    {showAlert && (
+                      <Alert className="mb-4">
+                        <Terminal className="h-4 w-4 text-black" />
+                        <AlertTitle className="text-black">Success!</AlertTitle>
+                        <AlertDescription className="text-black">
+                          Expense added successfully!
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    <div className="bg-transparent backdrop-blur-lg shadow-lg rounded-lg p-4 border border-white/20">
+                      <div className="bg-transparent p-4 rounded-lg">
+                        <h2 className="text-xl font-bold mb-4 text-center dm-serif-text-regular chart-colors">Add New Expense</h2>
+                        <form onSubmit={handleSubmit} className="space-y-2">
+                          <div className="flex space-x-2">
+                            <input
+                              type="number"
+                              placeholder="Amount"
+                              className="w-full border px-2 py-1 rounded mt-1 bg-transparent text-white"
+                              value={amount}
+                              onChange={(e) => setAmount(e.target.value)}
+                            />
+                            <select
+                              className="border px-2 py-1 rounded mt-1 bg-transparent text-white"
+                              value={currency}
+                              onChange={(e) => setCurrency(e.target.value)}
+                            >
+                              <option className="text-black">INR</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-white">Category</label>
+                            <select
+                              className="w-full border px-2 py-1 rounded mt-1 bg-transparent text-white"
+                              value={category}
+                              onChange={(e) => setCategory(e.target.value)}
+                            >
+                              <option className="text-black">Food</option>
+                              <option className="text-black">Housing</option>
+                              <option className="text-black">Transportation</option>
+                              <option className="text-black">Entertainment</option>
+                              <option className="text-black">Other</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-white">Date</label>
+                            <input
+                              type="date"
+                              className="w-full border px-2 py-1 rounded mt-1 bg-transparent text-white"
+                              value={date}
+                              onChange={(e) => setDate(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-white">From Account</label>
+                            <select
+                              className="w-full border px-2 py-1 rounded mt-1 bg-transparent text-white"
+                              value={fromAccount}
+                              onChange={(e) => setFromAccount(e.target.value)}
+                            >
+                              <option className="text-black">Cash</option>
+                              <option className="text-black">Bank</option>
+                              <option className="text-black">Credit Card</option>
+                              <option className="text-black">Other</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-white">Note</label>
+                            <input
+                              type="text"
+                              placeholder="Add a note"
+                              className="w-full border px-2 py-1 rounded mt-1 bg-transparent text-white"
+                              value={note}
+                              onChange={(e) => setNote(e.target.value)}
+                            />
+                          </div>
+                          <Button
+                            type="submit"
+                            className="w-full dm-serif-text-regular-italic text-white py-1 rounded hover:bg-blue-600"
+                          >
+                            Add Expense
+                          </Button>
+                        </form>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex space-x-2">
-                    <input
-                      type="number"
-                      placeholder="Amount"
-                      className="w-full border px-3 py-2 rounded mt-1 bg-transparent text-white"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                    />
-                    <select
-                      className="border px-3 py-2 rounded mt-1 bg-transparent text-white"
-                      value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
-                    >
-                      <option className="text-black">INR</option>
-                    </select>
+                  <div className="w-full">
+                    <List refresh={refreshExpenses} />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white">Category</label>
-                    <select
-                      className="w-full border px-3 py-2 rounded mt-1 bg-transparent text-white"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                    >
-                      <option className="text-black">Food</option>
-                      <option className="text-black">Housing</option>
-                      <option className="text-black">Transportation</option>
-                      <option className="text-black">Entertainment</option>
-                      <option className="text-black">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white">Date</label>
-                    <input
-                      type="date"
-                      className="w-full border px-3 py-2 rounded mt-1 bg-transparent text-white"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white">Note</label>
-                    <input
-                      type="text"
-                      placeholder="Add a note"
-                      className="w-full border px-3 py-2 rounded mt-1 bg-transparent text-white"
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600"
-                  >
-                    Add Expense
-                  </button>
-                </form>
+                </div>
               </div>
             </div>
-            <UserExpenses refresh={refreshExpenses} />
           </div>
         </div>
       </SidebarInset>

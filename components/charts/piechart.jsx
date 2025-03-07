@@ -95,78 +95,90 @@ export function Piechartcomponent() {
   }, [chartData]);
 
   return (
-    <Card className="flex flex-col max-w-xl">
-      <CardHeader className="items-center pb-0">
-        <CardTitle className="text-sm">Budget Allocation</CardTitle>
-        <CardDescription className="text-xs">Budget Categories</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 pb-0">
-        <ChartContainer
-          config={chartConfig}
-          className="mx-auto aspect-square max-h-[300px]"
-        >
-          <PieChart width={300} height={300}>
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel />}
-            />
-            <Pie
-              data={chartData}
-              dataKey="budget"
-              nameKey="category"
-              innerRadius={80}
-              outerRadius={120}
-              strokeWidth={3}
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-              ))}
-              <Label
-                content={({ viewBox }) => {
-                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                    return (
-                      <text
-                        x={viewBox.cx}
-                        y={viewBox.cy}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                      >
-                        <tspan
+    <div className="flex flex-col md:flex-row gap-4">
+      <Card className="flex flex-col bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-white/20 flex-1">
+        <CardHeader className="items-center pb-0">
+          <CardTitle className="dm-serif-text-regular attractive-font-color">Budget Allocation</CardTitle>
+          <CardDescription className="text-xs dm-serif-text-regular-italic attractive-font-color">Budget Categories</CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center pb-0">
+          <ChartContainer
+            config={chartConfig}
+            className="mx-auto aspect-square max-h-[300px] w-full"
+          >
+            <PieChart width={300} height={300}>
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent hideLabel />}
+              />
+              <Pie
+                data={chartData}
+                dataKey="budget"
+                nameKey="category"
+                innerRadius={80}
+                outerRadius={120}
+                strokeWidth={3}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                ))}
+                <Label
+                  content={({ viewBox }) => {
+                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                      return (
+                        <text
                           x={viewBox.cx}
                           y={viewBox.cy}
-                          className="fill-foreground text-xl font-bold"
+                          textAnchor="middle"
+                          dominantBaseline="middle"
                         >
-                          {totalBudget.toLocaleString()}
-                        </tspan>
-                        <tspan
-                          x={viewBox.cx}
-                          y={(viewBox.cy || 0) + 16}
-                          className="fill-muted-foreground text-xs"
-                        >
-                          Total Budget
-                        </tspan>
-                      </text>
-                    );
-                  }
-                }}
-              />
-            </Pie>
-          </PieChart>
-        </ChartContainer>
-      </CardContent>
-      <CardFooter className="flex-col gap-1 text-xs">
-        {chartData.map((item, index) => (
-          <div key={item.id} className="flex items-center gap-2">
-            <label className="flex-1">{item.category}</label>
-            <input
-              type="number"
-              value={item.budget}
-              onChange={(e) => handleBudgetChange(index, e.target.value)}
-              className="w-20 p-1 border rounded"
-            />
-          </div>
-        ))}
-      </CardFooter>
-    </Card>
+                          <tspan
+                            x={viewBox.cx}
+                            y={viewBox.cy}
+                            className="text-xl font-bold dm-serif-text-regular"
+                            style={{ fill: '#00d4ff' }} // Inline style for color
+                          >
+                            {totalBudget.toLocaleString()}
+                          </tspan>
+                          <tspan
+                            x={viewBox.cx}
+                            y={(viewBox.cy || 0) + 16}
+                            className="flex justify-center text-xs dm-serif-text-regular-italic"
+                            style={{ fill: '#00d4ff' }} // Inline style for color
+                          >
+                            Total Budget
+                          </tspan>
+                        </text>
+                      );
+                    }
+                  }}
+                />
+              </Pie>
+            </PieChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+      <Card className="flex flex-col bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-white/20 flex-1">
+        <CardHeader className="items-center pb-0">
+          <CardTitle className="flex justify-center dm-serif-text-regular attractive-font-color">Budget Categories</CardTitle>
+          <CardDescription className="flex justify-center text-xs dm-serif-text-regular-italic attractive-font-color">Adjust your budget</CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center pb-0 flex-1">
+          <CardFooter className="grid grid-cols-1 gap-2 text-xs text-black">
+            {chartData.map((item, index) => (
+              <div key={item.id} className="flex items-center gap-2 col-span-1">
+                <label className="flex-1 text-white">{item.category}</label>
+                <input
+                  type="number"
+                  value={item.budget}
+                  onChange={(e) => handleBudgetChange(index, e.target.value)}
+                  className="w-20 p-1 border rounded text-black custom-input"
+                />
+              </div>
+            ))}
+          </CardFooter>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

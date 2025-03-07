@@ -1,35 +1,102 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import * as AvatarPrimitive from "@radix-ui/react-avatar"
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { usePathname, useRouter } from "next/navigation"; 
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"; // Import the Avatar components
+import { supabase } from "@/lib/supabaseClient";
+import crypto from "crypto";
+import * as Popover from "@radix-ui/react-popover";
 
-import { cn } from "@/lib/utils"
+// Generate Gravatar URL based on email hash
+const getGravatarUrl = (email) => {
+  if (!email) return "/default-avatar.png"; 
+  const emailHash = crypto.createHash('md5').update(email.trim().toLowerCase()).digest('hex');
+  return `https://www.gravatar.com/avatar/${emailHash}?d=identicon`;
+};
 
-const Avatar = React.forwardRef(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Root
-    ref={ref}
-    className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)}
-    {...props} />
-))
-Avatar.displayName = AvatarPrimitive.Root.displayName
+function NavUserComponent() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const pathname = usePathname(); 
+  const router = useRouter(); // Use the router
 
-const AvatarImage = React.forwardRef(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Image
-    ref={ref}
-    className={cn("aspect-square h-full w-full", className)}
-    {...props} />
-))
-AvatarImage.displayName = AvatarPrimitive.Image.displayName
+  useEffect(() => {
+    const fetchUser = async () => {
+      setLoading(true);
 
-const AvatarFallback = React.forwardRef(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Fallback
-    ref={ref}
-    className={cn(
-      "flex h-full w-full items-center justify-center rounded-full bg-muted",
-      className
-    )}
-    {...props} />
-))
-AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) {
+        console.warn("No active session found.", sessionError);
+        setLoading(false);
+        return;
+      }
 
-export { Avatar, AvatarImage, AvatarFallback }
+      const { data, error } = await supabase.auth.getUser();
+      if (data?.user) {
+        const userData = data.user;
+        const fullName = userData.user_metadata?.full_name || userData.email;
+        const firstName = fullName.split(' ')[0]; // Extract first name
+        const avatarUrl = getGravatarUrl(userData.email); // Set avatar URL
+        console.log("Avatar URL:", avatarUrl); // Debugging: log the avatar URL
+        setUser({
+          name: firstName,
+          email: userData.email,
+          avatarUrl, // Set avatar URL
+        });
+      } else {
+        console.error("Error fetching user:", error);
+      }
+
+      setLoading(false);
+    };
+
+    fetchUser();
+  }, []);
+
+  const handleLogin = () => {
+    window.location.href = "/login"; 
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/"); // Redirect to home page
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    return (
+      <Button onClick={handleLogin} className="btn btn-primary">
+        Login
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <Popover.Root>
+        <Popover.Trigger asChild>
+          <div className="flex items-center gap-2 cursor-pointer">
+            <Avatar>
+              <AvatarImage src={user.avatarUrl} alt={user.name} />
+              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <span className="truncate font-semibold">{user.name || 'User'}</span>
+          </div>
+        </Popover.Trigger>
+        <Popover.Content className="bg-white p-2 rounded shadow-lg">
+          <Button onClick={handleLogout} className="btn btn-secondary mt-2">Logout</Button>
+        </Popover.Content>
+      </Popover.Root>
+    </div>
+  );
+}
+
+// Dynamically import the component
+const NavUser = dynamic(() => Promise.resolve(NavUserComponent), { ssr: false });
+
+export default NavUser;

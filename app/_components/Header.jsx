@@ -108,7 +108,12 @@ function Header() {
       <div className="flex items-center gap-4" ref={dropdownRef}>
         {session ? (
           <>
-            <UserAvatar />
+            <div 
+              className="relative cursor-pointer"
+              onClick={() => setShowDropdown(!showDropdown)}
+            >
+              {user?.user_metadata?.first_name || 'User'}
+            </div>
             
             {showDropdown && (
               <div className="absolute top-16 right-4 bg-white rounded-lg shadow-lg border p-2 w-48">

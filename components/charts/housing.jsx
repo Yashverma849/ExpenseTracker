@@ -8,7 +8,7 @@ import {
   RadialBar,
   RadialBarChart,
 } from "recharts";
-
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -60,7 +60,7 @@ export function HousingChartComponent() {
     if (user) {
       const { error } = await supabase
         .from("expenses")
-        .update({ amount: 0 })
+        .delete()
         .eq("category", "Housing")
         .eq("user_id", user.id);
 
@@ -73,10 +73,10 @@ export function HousingChartComponent() {
   };
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-white/20">
       <CardHeader className="items-center pb-0">
-        <CardTitle>Housing Expense</CardTitle>
-        <CardDescription>Total Housing Expense</CardDescription>
+        <CardTitle className="dm-serif-text-regular attractive-font-color">HOUSING EXPENSE</CardTitle>
+        <CardDescription className="text-xs dm-serif-text-regular-italic attractive-font-color">Total Housing Expense</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <ChartContainer
@@ -111,14 +111,14 @@ export function HousingChartComponent() {
                         <tspan
                           x={viewBox.cx}
                           y={viewBox.cy}
-                          className="fill-foreground text-4xl font-bold"
+                          className="fill-foreground text-4xl font-bold attractive-font-color dm-serif-text-regular-italic"
                         >
                           {chartData && chartData[0] ? chartData[0].budget.toLocaleString() : 0}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
                           y={(viewBox.cy || 0) + 24}
-                          className="fill-muted-foreground"
+                          className="fill-muted-foreground attractive-font-color dm-serif-text-regular-italic"
                         >
                           Expense
                         </tspan>
@@ -130,16 +130,16 @@ export function HousingChartComponent() {
             </PolarRadiusAxis>
           </RadialBarChart>
         </ChartContainer>
-        <strong className="flex justify-center text-center text-black text-sm mt-2">
+        <strong className="flex justify-center text-center text-black text-sm mt-2 attractive-font-color dm-serif-text-regular-italic">
           Reset the Housing expense
         </strong>
         <div className="flex justify-center mt-4">
-          <button
+          <Button
             onClick={handleClear}
-            className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
+            className=" hover:bg-red-600 text-white dm-serif-text-regular"
           >
-            Clear
-          </button>
+            RESET
+          </Button>
         </div>
       </CardContent>
     </Card>

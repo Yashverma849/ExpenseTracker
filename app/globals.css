@@ -97,3 +97,32 @@ body {
     @apply bg-background text-foreground;
   }
 }
+/* styles/glassmorphism.css */
+.glass-card {
+  @apply bg-white bg-opacity-20 backdrop-blur-md shadow-lg rounded-lg p-6 border border-white/30;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&display=swap');
+
+.dm-serif-text-regular-italic {
+  font-family: "DM Serif Text", serif;
+  font-weight: 400;
+  font-style: italic;
+}
+.dm-serif-text-regular {
+  font-family: "DM Serif Text", serif;
+  font-weight: 900;
+  font-style: normal;
+}
+
+
+.attractive-font-color {
+  color: #00d4ff; /* You can choose any color you like */
+}
+.chart-colors{
+  color: #093379;
+}
+.custom-input {
+  background-color: #f0f0f0; /* Change this to your desired background color */
+  color: black; /* Ensure the text color is visible on the new background */
+}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { AppSidebar } from "@/components/app-sidebar";
+import Image from "next/image";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -33,11 +34,15 @@ export default function Page() {
         const { data, error } = await supabase.auth.getUser();
         if (error) throw error;
         if (!data?.user) {
-          router.push('/'); // Redirect to homepage if not logged in
+          router.push('/');
         }
       } catch (err) {
-        setError("Failed to authenticate. Please log in.");
-        console.error("Authentication error:", err.message);
+        if (err.message === "Auth session missing!") {
+          router.push('/');
+        } else {
+          setError("Failed to authenticate. Please log in.");
+          console.error("Authentication error:", err.message);
+        }
       } finally {
         setLoading(false);
       }
@@ -47,7 +52,7 @@ export default function Page() {
   }, [router]);
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    return <div className="flex justify-center items-center h-screen text-white">Loading...</div>;
   }
 
   if (error) {
@@ -60,42 +65,64 @@ export default function Page() {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar className="bg-transparent backdrop-blur-lg border-r border-white/20" />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="#">
-                    Building Your Application
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-        </header>
-        <div
-          className="min-h-screen flex flex-col items-center justify-center p-4 bg-cover bg-center"
-          style={{ backgroundImage: "url('/pc.jpeg')" }}
-        >
-          <div className="w-full max-w-6xl">
-            <div
-              className="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-white/20"
-            >
-              <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-                <div className="flex justify-center grid grid-cols-1 md:grid-cols-3 gap-4 pl-4">
-                  <Piechartcomponent />
-                  <HousingChartComponent />
-                  <FoodChartComponent />
+        {/* Fixed background */}
+        <div className="relative flex justify-center w-full pb-16">
+          <Image 
+            src="/pexels-adrien-olichon-1257089-2387793.jpg" 
+            alt="logo" 
+            layout="fill" 
+            objectFit="cover" 
+            className="absolute inset-0 z-0" 
+          />
+          <div className="relative z-10 w-full">
+            {/* Main Content */}
+            <div className="min-h-screen">
+              {/* Header with Glass Effect */}
+              <header className="flex h-16 items-center gap-2 m-4 bg-transparent backdrop-blur-lg shadow-lg rounded-lg p-4 border border-white/20 text-white">
+                <div className="flex items-center gap-2 px-4 text-white">
+                  <SidebarTrigger className="-ml-1 text-white hover:bg-white/10 p-2 rounded-lg transition-colors" />
+                  <Separator orientation="vertical" className="mr-2 h-4 bg-white/30" />
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem className=" md:block">
+                        <BreadcrumbLink 
+                          href="#" 
+                          className="text-white transition-colors text-sm font-medium"
+                        >
+                          Building Your Application
+                        </BreadcrumbLink>
+                      </BreadcrumbItem>
+                      <BreadcrumbSeparator className="hidden md:block text-white" />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage className="text-white text-sm font-semibold">
+                          Data Fetching
+                        </BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
                 </div>
-                <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" />
+              </header>
+
+              {/* Charts Grid */}
+              <div className="p-4">
+                <div className="flex flex-1 flex-col gap-4">
+                  {/* Full-width Pie Chart */}
+                  <div className="bg-transparent backdrop-blur-lg shadow-lg rounded-xl p-6 border border-white/20">
+                    <Piechartcomponent />
+                  </div>
+
+                  {/* Two-column Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-transparent backdrop-blur-lg shadow-lg rounded-xl p-6 border border-white/20">
+                      <HousingChartComponent />
+                    </div>
+                    <div className="bg-transparent backdrop-blur-lg shadow-lg rounded-xl p-6 border border-white/20">
+                      <FoodChartComponent />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

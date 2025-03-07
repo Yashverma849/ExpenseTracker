@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
+import { Button } from "@/components/ui/button";
 
 const chartConfig = {
   safari: {
@@ -56,7 +57,7 @@ export function FoodChartComponent() {
     if (user) {
       const { error } = await supabase
         .from("expenses")
-        .update({ amount: 0 })
+        .delete()
         .eq("category", "Food")
         .eq("user_id", user.id);
 
@@ -69,26 +70,27 @@ export function FoodChartComponent() {
   };
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-white/20">
       <CardHeader className="items-center pb-0">
-        <CardTitle>Food Expense</CardTitle>
-        <CardDescription>Total Food Expense</CardDescription>
+        <CardTitle className="dm-serif-text-regular attractive-font-color">FOOD EXPENSE</CardTitle>
+        <CardDescription className="text-xs dm-serif-text-regular-italic attractive-font-color">Total Food Expense</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-[250px]"
+          className="mx-auto  aspect-square max-h-[250px]"
         >
           <RadialBarChart
             data={chartData}
             endAngle={100}
             innerRadius={80}
             outerRadius={140}
+            className="fill-current chart-colors"
           >
             <PolarGrid
               gridType="circle"
               radialLines={false}
-              stroke="none"
+              stroke="none" // Make the grid transparent
               className="first:fill-muted last:fill-background"
               polarRadius={[86, 74]}
             />
@@ -107,14 +109,14 @@ export function FoodChartComponent() {
                         <tspan
                           x={viewBox.cx}
                           y={viewBox.cy}
-                          className="fill-foreground text-4xl font-bold"
+                          className="fill-foreground text-4xl font-bold attractive-font-color dm-serif-text-regular-italic"
                         >
                           {chartData && chartData[0] ? chartData[0].budget : 0}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
                           y={(viewBox.cy || 0) + 24}
-                          className="fill-muted-foreground"
+                          className="fill-muted-foreground attractive-font-color dm-serif-text-regular-italic"
                         >
                           Expense
                         </tspan>
@@ -126,16 +128,16 @@ export function FoodChartComponent() {
             </PolarRadiusAxis>
           </RadialBarChart>
         </ChartContainer>
-        <strong className="flex justify-center text-center text-black text-sm mt-2">
+        <strong className="flex justify-center text-center text-black text-sm mt-2 attractive-font-color dm-serif-text-regular-italic">
           Reset the Food expense
         </strong>
         <div className="flex justify-center mt-4">
-          <button
+          <Button
             onClick={handleClear}
-            className="p-2 bg-red-500 text-white rounded hover:bg-red-600"
+            className=" hover:bg-red-600 text-white dm-serif-text-regular"
           >
-            Clear
-          </button>
+            RESET
+          </Button>
         </div>
       </CardContent>
     </Card>
