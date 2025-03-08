@@ -11,6 +11,7 @@ function Header() {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const dropdownRef = useRef(null);
 
   // Fetching user session
@@ -55,6 +56,20 @@ function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Scroll event listener
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 0) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Navigation handlers
   const handleLogoClick = () => router.push('/');
   const handleSignupClick = () => router.push('/signup');
@@ -94,12 +109,14 @@ function Header() {
   );
 
   return (
-    <div className='p-4 flex justify-between items-center border-b shadow-sm bg-white sticky top-0 z-50'>
+    <div
+      className={`px-4 py-1 flex justify-between items-center shadow-sm sticky top-0 z-50 rounded-2xl transition-all duration-300 ${isScrolled ? 'bg-black bg-opacity-50 backdrop-filter backdrop-blur-lg' : 'bg-transparent'}`}
+    >
       <Image 
-        src="/Finzarc-removebg-preview.png" 
+        src="/Finz (1).png" 
         alt="logo" 
-        width={120} 
-        height={40} 
+        width={100} 
+        height={100} 
         onClick={handleLogoClick} 
         className="cursor-pointer hover:opacity-80 transition-opacity"
         priority
@@ -116,7 +133,7 @@ function Header() {
             </div>
             
             {showDropdown && (
-              <div className="absolute top-16 right-4 bg-white rounded-lg shadow-lg border p-2 w-48">
+              <div className="absolute top-12 right-4 bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg border border-white/20 rounded-lg p-2 w-48">
                 <div className="p-2 text-sm text-gray-700">
                   {user?.user_metadata?.first_name || 'User'}
                 </div>
@@ -133,7 +150,8 @@ function Header() {
         ) : (
           <Button 
             onClick={handleSignupClick}
-            className="px-6 py-2 rounded-full hover:bg-indigo-700 transition-colors"
+            variant="attractive" // Use the new variant
+            className="px-4 py-1 rounded-full transition-colors"
           >
             Sign Up
           </Button>

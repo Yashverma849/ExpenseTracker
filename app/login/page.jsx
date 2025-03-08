@@ -1,62 +1,70 @@
 "use client";
 
-import { useState } from 'react';
-import Header from '../_components/Header';
-import { supabase } from '../../lib/supabaseClient';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "../../lib/supabaseClient";
+import Header from "../_components/Header";
+import { Button } from "@/components/ui/button";
 
 export default function Login() {
   const router = useRouter();
 
   // state variables
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState("");
 
   // handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted');
+    setLoading(true);
+    setError(null);
+    setSuccess("");
+
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+
     if (error) {
-      console.error('Error signing in:', error.message);
       setError(error.message);
+      setLoading(false);
     } else {
-      // Check if the user is authenticated
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (user) {
-        console.log('User authenticated:', user);
-        // Redirect to dashboard
-        router.push('/dashboard');
+        setSuccess("Login successful! Redirecting...");
+        setTimeout(() => router.push("/dashboard"), 2000); // Redirect after 2 seconds
       } else {
-        console.error('Failed to authenticate user.');
-        setError('Failed to authenticate user.');
+        setError("Failed to authenticate user.");
       }
+      setLoading(false);
     }
   };
 
   return (
-    <>
+    <section
+      className="min-h-screen flex flex-col bg-cover bg-center"
+      style={{
+        backgroundImage: "url('/pexels-adrien-olichon-1257089-2387793.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
       <Header />
-      <div className="flex min-h-full flex-1 flex-col justify-center mx-auto max-w-screen-xl px-4 py-32">
-        <div className="lg:mx-auto lg:w-full lg:max-w-sm">
-          <img
-            alt="Your Company"
-            src="/Finzarc-removebg-preview.png"
-            className="mx-auto h-10 w-auto"
-          />
-          <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">
-            Sign in to your account
-          </h2>
-        </div>
+      <div className="flex flex-grow items-center justify-center">
+        <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:px-16 lg:py-12">
+          <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
+            <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
+              Sign in to your account
+            </h2>
 
-        <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm/6 font-medium text-gray-900">
-                Email address
-              </label>
-              <div className="mt-2">
+            <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
+              <div className="col-span-6">
+                <label htmlFor="email" className="block text-sm font-medium text-white">
+                  Email address
+                </label>
                 <input
                   id="email"
                   name="email"
@@ -65,23 +73,19 @@ export default function Login() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 outline-gray-300 hover:outline-indigo-500 hover:ring-2 hover:ring-indigo-500 sm:text-sm/6"
+                  className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-            </div>
 
-            <div>
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="block text-sm/6 font-medium text-gray-900">
-                  Password
-                </label>
-                <div className="text-sm">
-                  <a href="#" className="font-semibold text-indigo-600 hover:text-indigo-500">
+              <div className="col-span-6">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="password" className="block text-sm font-medium text-white">
+                    Password
+                  </label>
+                  <a href="#" className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
                     Forgot password?
                   </a>
                 </div>
-              </div>
-              <div className="mt-2">
                 <input
                   id="password"
                   name="password"
@@ -90,24 +94,27 @@ export default function Login() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 outline-gray-300 hover:outline-indigo-500 hover:ring-2 hover:ring-indigo-500 sm:text-sm/6"
+                  className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-            </div>
 
-            {error && <div className="text-red-500 text-sm">{error}</div>}
+              {error && <div className="col-span-6 text-red-500 text-sm text-center">{error}</div>}
+              {success && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
 
-            <div>
-              <button
-                type="submit"
-                className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-indigo-500 hover:ring-2 hover:ring-indigo-500"
-              >
-                Sign in
-              </button>
-            </div>
-          </form>
-        </div>
+              <div className="col-span-6">
+                <Button
+                  type="submit"
+                  variant="attractive"
+                  className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
+                  disabled={loading}
+                >
+                  {loading ? "Signing in..." : "Sign in"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </main>
       </div>
-    </>
+    </section>
   );
 }

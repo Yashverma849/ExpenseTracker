@@ -7,7 +7,6 @@ import Hero from '@/app/_components/Hero'; // Correct import path
 export default function Home() {
   return (
     <div>
-      <Header />
       <Hero />
     </div>
   );
