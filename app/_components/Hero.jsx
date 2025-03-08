@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 function Hero() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const sectionRef = useRef(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -29,6 +30,31 @@ function Hero() {
     };
   }, []);
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          sectionRef.current.classList.add("fade-in");
+          sectionRef.current.classList.remove("fade-out");
+        } else {
+          sectionRef.current.classList.add("fade-out");
+          sectionRef.current.classList.remove("fade-in");
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, []);
+
   const handleGetStarted = () => {
     router.push(isAuthenticated ? "/dashboard" : "/signup");
   };
@@ -41,7 +67,10 @@ function Hero() {
       <Header />
 
       {/* Hero Section */}
-      <section className="flex flex-col items-center justify-center flex-grow pb-16 px-6">
+      <section
+        ref={sectionRef}
+        className="flex flex-col items-center justify-center flex-grow pb-16 px-6 fade-in"
+      >
         <div className="max-w-screen-xl mx-auto text-center py-20">
           <div className="w-full max-w-4xl px-4 mx-auto mt-8 flex justify-center pb-16">
             <Image
