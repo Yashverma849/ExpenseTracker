@@ -66,10 +66,11 @@ function Hero() {
             Get a detailed analysis of your expenses.
           </p>
 
-          <div className="mt-8">
+          <div className="col-span-6 pt-10">
             <Button
-              onClick={handleGetStarted}
-              className="px-12 py-3 text-sm font-medium rounded-md shadow-md bg-primary text-white hover:bg-opacity-80"
+              type="submit"
+              variant="attractive"
+              className="px-3 py-2 text-lg font-lg rounded-md shadow-xs"
             >
               Get Started
             </Button>

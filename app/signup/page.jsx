@@ -72,7 +72,7 @@ function Signup() {
         <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:px-16 lg:py-12">
           <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
             <div className="flex justify-center">
-              <Image src="/finz-removebg-preview.png" alt="logo" width={100} height={100} />
+              <Image src="/Finz.png" alt="logo" width={100} height={100} />
             </div>
             <h1 className="mt-6 text-2xl font-bold text-white sm:text-3xl md:text-4xl">
               Welcome To Finzarc
@@ -105,8 +105,9 @@ function Signup() {
               <div className="col-span-6 sm:flex sm:items-center sm:gap-4">
                 <Button
                   type="submit"
+                  variant="attractive"
+                  className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
                   disabled={loading}
-                  className="w-full sm:w-auto px-6 py-3 text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-all"
                 >
                   {loading ? "Creating Account..." : "Create an account"}
                 </Button>
