@@ -109,7 +109,7 @@ export function Piechartcomponent() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center pb-0">
-          <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[300px] w-full">
+          <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[300px] w-full aspect-ratio-1">
             <PieChart width={300} height={300}>
               <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
               <Pie
