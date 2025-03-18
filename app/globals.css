@@ -126,3 +126,12 @@ body {
   background-color: #f0f0f0; /* Change this to your desired background color */
   color: black; /* Ensure the text color is visible on the new background */
 }
+.fade-out {
+  opacity: 0;
+  transition: opacity 1s ease-out;
+}
+
+.fade-in {
+  opacity: 1;
+  transition: opacity 1s ease-in;
+}
