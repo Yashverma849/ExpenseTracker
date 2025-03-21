@@ -121,27 +121,12 @@ function mapCategory(rawCategory) {
     dining: "food",
     restaurant: "food",
     snacks: "food",
-    food: "food", // Ensures all food-related items stay in "food"
-
-    rent: "housing",
-    mortgage: "housing",
-    property: "housing",
-    housing: "housing",
-    bills: "housing",
-
-    transport: "transportation",
-    fuel: "transportation",
-    petrol: "transportation",
-    
-    shopping: "shopping",
-    clothing: "shopping",
-
-    entertainment: "entertainment",
-    utilities: "utilities"
+    food: "food" // Ensures all food-related items stay in "food"
   };
 
   return categoryMap[rawCategory.toLowerCase()] || rawCategory;
 }
+
 // ✅ Function to Convert Date Format
 function convertDateFormat(dateStr) {
   const monthMap = {
