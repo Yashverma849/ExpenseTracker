@@ -27,25 +27,30 @@ const chartConfig = {
   },
 };
 
-export function FoodChartComponent() {
+export function FoodChartComponent({ refresh }) {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
-      if (authError || !userData?.user) {
-        console.error("User not authenticated", authError?.message);
+      setLoading(true);
+
+      // Get the current user session
+      const { data: { user }, error: sessionError } = await supabase.auth.getUser();
+
+      if (sessionError || !user?.id) {
+        console.error("User not authenticated", sessionError?.message);
         setLoading(false);
         return;
       }
 
-      const user = userData.user;
+      const userId = user.id;
+
       const { data, error } = await supabase
         .from("expenses")
         .select("amount")
         .eq("category", "Food")
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
 
       if (error) {
         console.log("Error fetching data:", error);
@@ -58,27 +63,30 @@ export function FoodChartComponent() {
     };
 
     fetchData();
-  }, []);
 
-  const handleClear = async () => {
-    const { data: userData, error: authError } = await supabase.auth.getUser();
-    if (authError || !userData?.user) {
-      console.error("User not authenticated", authError?.message);
-      return;
-    }
+    // Realtime Listener for Updates
+    const subscription = supabase
+      .channel("food-expenses")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "expenses" },
+        (payload) => {
+          console.log("Change received!", payload);
+          fetchData(); // Refresh data on DB changes
+        }
+      )
+      .subscribe();
 
-    const user = userData.user;
-    const { error } = await supabase
-      .from("expenses")
-      .delete()
-      .eq("category", "Food")
-      .eq("user_id", user.id);
+    return () => {
+      supabase.removeChannel(subscription); // Cleanup on unmount
+    };
+  }, [refresh]);
 
-    if (error) {
-      console.log("Error clearing data:", error);
-    } else {
-      setChartData([{ name: "Food", budget: 0 }]);
-    }
+  const handleRefresh = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+    }, 1000);
   };
 
   return (
@@ -141,14 +149,14 @@ export function FoodChartComponent() {
           </RadialBarChart>
         </ChartContainer>
         <strong className="flex justify-center text-center text-black text-sm mt-2 attractive-font-color dm-serif-text-regular-italic">
-          Reset the Food expense
+          Refresh the Food expense
         </strong>
         <div className="flex justify-center mt-4">
           <Button
-            onClick={handleClear}
-            className="hover:bg-red-600 text-white dm-serif-text-regular"
+            onClick={handleRefresh}
+            className="hover:bg-blue-600 text-white dm-serif-text-regular"
           >
-            RESET
+            REFRESH
           </Button>
         </div>
       </CardContent>

@@ -1,4 +1,3 @@
-// filepath: c:\Users\verma\expensetracker\app\dashboard\page.jsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -23,11 +22,13 @@ import {
 import { HousingChartComponent } from "@/components/charts/housing";
 import { Piechartcomponent } from "@/components/charts/piechart";
 import { FoodChartComponent } from "@/components/charts/food";
+import Chatbox from "@/components/Chatbox";
 
 export default function Page() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [expenses, setExpenses] = useState([]);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -51,6 +52,26 @@ export default function Page() {
 
     checkUser();
   }, [router]);
+
+  const fetchExpenses = async () => {
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('*');
+
+    if (error) {
+      console.error('Error fetching expenses:', error.message, error.details);
+    } else {
+      setExpenses(data);
+    }
+  };
+
+  useEffect(() => {
+    fetchExpenses();
+  }, []);
+
+  const handleExpenseAdded = () => {
+    fetchExpenses();
+  };
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen text-white">Loading...</div>;
@@ -111,24 +132,26 @@ export default function Page() {
                 <div className="flex flex-1 flex-col gap-4">
                   {/* Full-width Pie Chart */}
                   <div className="bg-transparent backdrop-blur-lg shadow-lg rounded-xl p-6 border border-white/20">
-                    <Piechartcomponent />
+                    <Piechartcomponent expenses={expenses} />
                   </div>
 
                   {/* Two-column Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-transparent backdrop-blur-lg shadow-lg rounded-xl p-6 border border-white/20">
-                      <HousingChartComponent />
+                      <HousingChartComponent expenses={expenses} />
                     </div>
                     <div className="bg-transparent backdrop-blur-lg shadow-lg rounded-xl p-6 border border-white/20">
-                      <FoodChartComponent />
+                      <FoodChartComponent expenses={expenses} />
                     </div>
                   </div>
                 </div>
               </div>
+              
             </div>
           </div>
         </div>
       </SidebarInset>
+      <Chatbox onExpenseAdded={handleExpenseAdded} />
     </SidebarProvider>
   );
 }
