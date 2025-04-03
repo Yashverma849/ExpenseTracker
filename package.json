@@ -2,6 +2,7 @@
   "name": "expensetracker",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -34,6 +35,7 @@
     "framer-motion": "^12.4.10",
     "google-auth-library": "^9.15.1",
     "lucide-react": "^0.475.0",
+    "module-alias": "^2.2.3",
     "next": "^15.2.3",
     "node-fetch": "^3.3.2",
     "openai": "^4.87.4",

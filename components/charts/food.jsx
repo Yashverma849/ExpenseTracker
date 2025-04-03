@@ -28,135 +28,177 @@ const chartConfig = {
 };
 
 export function FoodChartComponent({ refresh }) {
-  const [chartData, setChartData] = useState([]);
+  const [chartData, setChartData] = useState([{ name: "Food", budget: 0 }]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [debugInfo, setDebugInfo] = useState("Initializing...");
+  const [allExpenses, setAllExpenses] = useState([]);
+  const [categories, setCategories] = useState([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-
-      // Get the current user session
-      const { data: { user }, error: sessionError } = await supabase.auth.getUser();
-
-      if (sessionError || !user?.id) {
-        console.error("User not authenticated", sessionError?.message);
+  // Function to fetch ALL expenses first to see what categories exist
+  const fetchAllExpenses = async () => {
+    setLoading(true);
+    setError(null);
+    setDebugInfo("Fetching all expenses to check categories...");
+    
+    try {
+      // Get current user session
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData?.session?.user?.id) {
+        setDebugInfo("No user session found");
+        setError("Please log in to view expenses");
         setLoading(false);
         return;
       }
-
-      const userId = user.id;
-
-      const { data, error } = await supabase
+      
+      const userId = sessionData.session.user.id;
+      setDebugInfo(`User authenticated. ID: ${userId}`);
+      
+      // First, fetch ALL expenses to check what's in the database
+      const { data: allExpensesData, error: allExpensesError } = await supabase
         .from("expenses")
-        .select("amount")
-        .eq("category", "Food")
+        .select("*")
         .eq("user_id", userId);
-
-      if (error) {
-        console.log("Error fetching data:", error);
-      } else {
-        const totalExpense = data.reduce((acc, expense) => acc + expense.amount, 0);
-        setChartData([{ name: "Food", budget: totalExpense }]);
+      
+      if (allExpensesError) {
+        console.error("Error fetching all expenses:", allExpensesError);
+        setDebugInfo(`Database error: ${allExpensesError.message}`);
+        setError(`Failed to fetch expenses: ${allExpensesError.message}`);
+        setLoading(false);
+        return;
       }
-
+      
+      // Log and store all expenses
+      console.log("All expenses:", allExpensesData);
+      setAllExpenses(allExpensesData || []);
+      
+      // Extract unique categories to see what's available (but don't display them)
+      const uniqueCategories = [...new Set(allExpensesData.map(exp => exp.category))];
+      setCategories(uniqueCategories);
+      
+      // Now, specifically look for Food expenses with different case sensitivity
+      const foodExpenses = allExpensesData.filter(exp => 
+        exp.category === 'Food' || 
+        exp.category === 'food' || 
+        exp.category?.toLowerCase() === 'food'
+      );
+      
+      console.log("Food expenses (case insensitive):", foodExpenses);
+      
+      if (foodExpenses.length === 0) {
+        setDebugInfo(`No food expenses found. Add some expenses with category "Food" first.`);
+        setChartData([{ name: "Food", budget: 0 }]);
+      } else {
+        // Calculate the total
+        const total = foodExpenses.reduce((sum, exp) => {
+          const amount = typeof exp.amount === 'number' ? exp.amount : parseFloat(exp.amount || '0');
+          return sum + (isNaN(amount) ? 0 : amount);
+        }, 0);
+        
+        console.log("Total food expense:", total);
+        setDebugInfo(`Found ${foodExpenses.length} food expenses. Total: ${total.toFixed(2)}`);
+        setChartData([{ name: "Food", budget: total }]);
+      }
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      setDebugInfo(`Error: ${error.message}`);
+      setError(`Something went wrong: ${error.message}`);
+    } finally {
       setLoading(false);
-    };
-
-    fetchData();
-
-    // Realtime Listener for Updates
-    const subscription = supabase
-      .channel("food-expenses")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "expenses" },
-        (payload) => {
-          console.log("Change received!", payload);
-          fetchData(); // Refresh data on DB changes
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(subscription); // Cleanup on unmount
-    };
-  }, [refresh]);
-
-  const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
+    }
   };
+
+  // Initial data fetch on component mount
+  useEffect(() => {
+    fetchAllExpenses();
+  }, [refresh]);
 
   return (
     <Card className="flex flex-col bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-white/20">
       <CardHeader className="items-center pb-0">
         <CardTitle className="dm-serif-text-regular attractive-font-color">FOOD EXPENSE</CardTitle>
-        <CardDescription className="text-xs dm-serif-text-regular-italic attractive-font-color">Total Food Expense</CardDescription>
+        <CardDescription className="text-xs dm-serif-text-regular-italic attractive-font-color">
+          Total Food Expense
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
-        <ChartContainer
-          config={chartConfig}
-          className="mx-auto aspect-square max-h-[250px]"
-        >
-          <RadialBarChart
-            data={chartData}
-            endAngle={100}
-            innerRadius={80}
-            outerRadius={140}
-            className="fill-current chart-colors"
+        {error ? (
+          <div className="text-red-500 text-center my-8">{error}</div>
+        ) : (
+          <ChartContainer
+            config={chartConfig}
+            className="mx-auto aspect-square max-h-[250px]"
           >
-            <PolarGrid
-              gridType="circle"
-              radialLines={false}
-              stroke="none" // Make the grid transparent
-              className="first:fill-muted last:fill-background"
-              polarRadius={[86, 74]}
-            />
-            <RadialBar dataKey="budget" background />
-            <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
-              <Label
-                content={({ viewBox }) => {
-                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                    return (
-                      <text
-                        x={viewBox.cx}
-                        y={viewBox.cy}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                      >
-                        <tspan
+            <RadialBarChart
+              data={chartData}
+              endAngle={100}
+              innerRadius={80}
+              outerRadius={140}
+              className="fill-current chart-colors"
+            >
+              <PolarGrid
+                gridType="circle"
+                radialLines={false}
+                stroke="none"
+                className="first:fill-muted last:fill-background"
+                polarRadius={[86, 74]}
+              />
+              <RadialBar dataKey="budget" background />
+              <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+                <Label
+                  content={({ viewBox }) => {
+                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                      return (
+                        <text
                           x={viewBox.cx}
                           y={viewBox.cy}
-                          className="fill-foreground text-4xl font-bold attractive-font-color dm-serif-text-regular-italic"
+                          textAnchor="middle"
+                          dominantBaseline="middle"
                         >
-                          {chartData && chartData[0] ? chartData[0].budget : 0}
-                        </tspan>
-                        <tspan
-                          x={viewBox.cx}
-                          y={(viewBox.cy || 0) + 24}
-                          className="fill-muted-foreground attractive-font-color dm-serif-text-regular-italic"
-                        >
-                          Expense
-                        </tspan>
-                      </text>
-                    );
-                  }
-                }}
-              />
-            </PolarRadiusAxis>
-          </RadialBarChart>
-        </ChartContainer>
-        <strong className="flex justify-center text-center text-black text-sm mt-2 attractive-font-color dm-serif-text-regular-italic">
-          Refresh the Food expense
-        </strong>
+                          <tspan
+                            x={viewBox.cx}
+                            y={viewBox.cy}
+                            className="fill-foreground text-4xl font-bold attractive-font-color dm-serif-text-regular-italic"
+                          >
+                            {loading ? "..." : chartData[0]?.budget.toFixed(2)}
+                          </tspan>
+                          <tspan
+                            x={viewBox.cx}
+                            y={(viewBox.cy || 0) + 24}
+                            className="fill-muted-foreground attractive-font-color dm-serif-text-regular-italic"
+                          >
+                            Expense
+                          </tspan>
+                        </text>
+                      );
+                    }
+                  }}
+                />
+              </PolarRadiusAxis>
+            </RadialBarChart>
+          </ChartContainer>
+        )}
+        
+        {/* Debug info */}
+        <div className="text-center text-xs mt-2 text-blue-300">
+          {debugInfo}
+        </div>
+        
+        {/* Show expense count */}
+        <div className="text-center text-xs mt-1 text-green-300">
+          {allExpenses.length > 0 
+            ? `Total Expenses: ${allExpenses.length}` 
+            : "No expenses found in database"}
+        </div>
+        
         <div className="flex justify-center mt-4">
           <Button
-            onClick={handleRefresh}
+            onClick={fetchAllExpenses}
             className="hover:bg-blue-600 text-white dm-serif-text-regular"
+            disabled={loading}
           >
-            REFRESH
+            {loading ? "LOADING..." : "REFRESH"}
           </Button>
         </div>
       </CardContent>

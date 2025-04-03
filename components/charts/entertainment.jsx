@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import {
   Label,
   PolarGrid,
@@ -8,7 +9,7 @@ import {
   RadialBar,
   RadialBarChart,
 } from "recharts";
-import { Button } from "@/components/ui/button";
+
 import {
   Card,
   CardContent,
@@ -17,32 +18,28 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
-import { supabase } from "@/lib/supabaseClient";
+import { Button } from "@/components/ui/button";
 
 const chartConfig = {
-  housing: {
-    label: "Housing",
-    color: "hsl(var(--chart-1))",
-  },
   safari: {
     label: "Safari",
     color: "hsl(var(--chart-2))",
   },
 };
 
-export function HousingChartComponent({ refresh }) {
-  const [chartData, setChartData] = useState([{ name: "Housing", budget: 0 }]);
+export function EntertainmentChartComponent({ refresh }) {
+  const [chartData, setChartData] = useState([{ name: "Entertainment", budget: 0 }]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [debugInfo, setDebugInfo] = useState("Initializing...");
   const [allExpenses, setAllExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  // Function to fetch ALL expenses and filter for housing
+  // Function to fetch ALL expenses first to see what categories exist
   const fetchAllExpenses = async () => {
     setLoading(true);
     setError(null);
-    setDebugInfo("Fetching all expenses to check for housing...");
+    setDebugInfo("Fetching all expenses to check categories...");
     
     try {
       // Get current user session
@@ -58,7 +55,7 @@ export function HousingChartComponent({ refresh }) {
       const userId = sessionData.session.user.id;
       setDebugInfo(`User authenticated. ID: ${userId}`);
       
-      // Fetch ALL expenses to check what's in the database
+      // First, fetch ALL expenses to check what's in the database
       const { data: allExpensesData, error: allExpensesError } = await supabase
         .from("expenses")
         .select("*")
@@ -76,33 +73,32 @@ export function HousingChartComponent({ refresh }) {
       console.log("All expenses:", allExpensesData);
       setAllExpenses(allExpensesData || []);
       
-      // Extract unique categories to see what's available
+      // Extract unique categories to see what's available (but don't display them)
       const uniqueCategories = [...new Set(allExpensesData.map(exp => exp.category))];
       setCategories(uniqueCategories);
-      setDebugInfo(`Found ${allExpensesData.length} total expenses. Categories: ${uniqueCategories.join(', ')}`);
       
-      // Look for Housing expenses with different case sensitivity
-      const housingExpenses = allExpensesData.filter(exp => 
-        exp.category === 'Housing' || 
-        exp.category === 'housing' || 
-        exp.category?.toLowerCase() === 'housing'
+      // Now, specifically look for Entertainment expenses with different case sensitivity
+      const entertainmentExpenses = allExpensesData.filter(exp => 
+        exp.category === 'Entertainment' || 
+        exp.category === 'entertainment' || 
+        exp.category?.toLowerCase() === 'entertainment'
       );
       
-      console.log("Housing expenses (case insensitive):", housingExpenses);
+      console.log("Entertainment expenses (case insensitive):", entertainmentExpenses);
       
-      if (housingExpenses.length === 0) {
-        setDebugInfo(`No housing expenses found. Add some expenses with category "Housing" first.`);
-        setChartData([{ name: "Housing", budget: 0 }]);
+      if (entertainmentExpenses.length === 0) {
+        setDebugInfo(`No entertainment expenses found. Add some expenses with category "Entertainment" first.`);
+        setChartData([{ name: "Entertainment", budget: 0 }]);
       } else {
         // Calculate the total
-        const total = housingExpenses.reduce((sum, exp) => {
+        const total = entertainmentExpenses.reduce((sum, exp) => {
           const amount = typeof exp.amount === 'number' ? exp.amount : parseFloat(exp.amount || '0');
           return sum + (isNaN(amount) ? 0 : amount);
         }, 0);
         
-        console.log("Total housing expense:", total);
-        setDebugInfo(`Found ${housingExpenses.length} housing expenses. Total: ${total.toFixed(2)}`);
-        setChartData([{ name: "Housing", budget: total }]);
+        console.log("Total entertainment expense:", total);
+        setDebugInfo(`Found ${entertainmentExpenses.length} entertainment expenses. Total: ${total.toFixed(2)}`);
+        setChartData([{ name: "Entertainment", budget: total }]);
       }
     } catch (error) {
       console.error("Unexpected error:", error);
@@ -121,8 +117,10 @@ export function HousingChartComponent({ refresh }) {
   return (
     <Card className="flex flex-col bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-white/20">
       <CardHeader className="items-center pb-0">
-        <CardTitle className="dm-serif-text-regular attractive-font-color">HOUSING EXPENSE</CardTitle>
-        <CardDescription className="text-xs dm-serif-text-regular-italic attractive-font-color">Total Housing Expense</CardDescription>
+        <CardTitle className="dm-serif-text-regular attractive-font-color">ENTERTAINMENT EXPENSE</CardTitle>
+        <CardDescription className="text-xs dm-serif-text-regular-italic attractive-font-color">
+          Total Entertainment Expense
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         {error ? (
@@ -137,6 +135,7 @@ export function HousingChartComponent({ refresh }) {
               endAngle={100}
               innerRadius={80}
               outerRadius={140}
+              className="fill-current chart-colors"
             >
               <PolarGrid
                 gridType="circle"
@@ -205,4 +204,4 @@ export function HousingChartComponent({ refresh }) {
       </CardContent>
     </Card>
   );
-}
+} 

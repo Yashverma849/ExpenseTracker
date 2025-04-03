@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import {
   Label,
   PolarGrid,
@@ -8,7 +9,7 @@ import {
   RadialBar,
   RadialBarChart,
 } from "recharts";
-import { Button } from "@/components/ui/button";
+
 import {
   Card,
   CardContent,
@@ -17,32 +18,31 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
-import { supabase } from "@/lib/supabaseClient";
+import { Button } from "@/components/ui/button";
 
 const chartConfig = {
-  housing: {
-    label: "Housing",
-    color: "hsl(var(--chart-1))",
-  },
   safari: {
     label: "Safari",
     color: "hsl(var(--chart-2))",
   },
 };
 
-export function HousingChartComponent({ refresh }) {
-  const [chartData, setChartData] = useState([{ name: "Housing", budget: 0 }]);
+export function OthersChartComponent({ refresh }) {
+  const [chartData, setChartData] = useState([{ name: "Others", budget: 0 }]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [debugInfo, setDebugInfo] = useState("Initializing...");
   const [allExpenses, setAllExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
 
-  // Function to fetch ALL expenses and filter for housing
+  // Known categories that are handled by other components
+  const knownCategories = ['food', 'housing', 'transportation', 'entertainment'];
+
+  // Function to fetch expenses that don't belong to common categories
   const fetchAllExpenses = async () => {
     setLoading(true);
     setError(null);
-    setDebugInfo("Fetching all expenses to check for housing...");
+    setDebugInfo("Fetching all expenses to find 'Others' category...");
     
     try {
       // Get current user session
@@ -79,30 +79,29 @@ export function HousingChartComponent({ refresh }) {
       // Extract unique categories to see what's available
       const uniqueCategories = [...new Set(allExpensesData.map(exp => exp.category))];
       setCategories(uniqueCategories);
-      setDebugInfo(`Found ${allExpensesData.length} total expenses. Categories: ${uniqueCategories.join(', ')}`);
       
-      // Look for Housing expenses with different case sensitivity
-      const housingExpenses = allExpensesData.filter(exp => 
-        exp.category === 'Housing' || 
-        exp.category === 'housing' || 
-        exp.category?.toLowerCase() === 'housing'
-      );
+      // Filter out expenses that belong to known categories
+      const otherExpenses = allExpensesData.filter(exp => {
+        const lowerCaseCategory = exp.category?.toLowerCase() || '';
+        return !knownCategories.some(cat => lowerCaseCategory === cat || lowerCaseCategory.includes(cat));
+      });
       
-      console.log("Housing expenses (case insensitive):", housingExpenses);
+      console.log("Other expenses:", otherExpenses);
       
-      if (housingExpenses.length === 0) {
-        setDebugInfo(`No housing expenses found. Add some expenses with category "Housing" first.`);
-        setChartData([{ name: "Housing", budget: 0 }]);
+      if (otherExpenses.length === 0) {
+        setDebugInfo(`No other expenses found. All expenses belong to main categories.`);
+        setChartData([{ name: "Others", budget: 0 }]);
       } else {
         // Calculate the total
-        const total = housingExpenses.reduce((sum, exp) => {
+        const total = otherExpenses.reduce((sum, exp) => {
           const amount = typeof exp.amount === 'number' ? exp.amount : parseFloat(exp.amount || '0');
           return sum + (isNaN(amount) ? 0 : amount);
         }, 0);
         
-        console.log("Total housing expense:", total);
-        setDebugInfo(`Found ${housingExpenses.length} housing expenses. Total: ${total.toFixed(2)}`);
-        setChartData([{ name: "Housing", budget: total }]);
+        console.log("Total other expenses:", total);
+        const categories = [...new Set(otherExpenses.map(exp => exp.category))].join(', ');
+        setDebugInfo(`Found ${otherExpenses.length} other expenses in categories: ${categories}. Total: ${total.toFixed(2)}`);
+        setChartData([{ name: "Others", budget: total }]);
       }
     } catch (error) {
       console.error("Unexpected error:", error);
@@ -121,8 +120,10 @@ export function HousingChartComponent({ refresh }) {
   return (
     <Card className="flex flex-col bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg p-6 border border-white/20">
       <CardHeader className="items-center pb-0">
-        <CardTitle className="dm-serif-text-regular attractive-font-color">HOUSING EXPENSE</CardTitle>
-        <CardDescription className="text-xs dm-serif-text-regular-italic attractive-font-color">Total Housing Expense</CardDescription>
+        <CardTitle className="dm-serif-text-regular attractive-font-color">OTHER EXPENSES</CardTitle>
+        <CardDescription className="text-xs dm-serif-text-regular-italic attractive-font-color">
+          Miscellaneous Expenses
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         {error ? (
@@ -137,6 +138,7 @@ export function HousingChartComponent({ refresh }) {
               endAngle={100}
               innerRadius={80}
               outerRadius={140}
+              className="fill-current chart-colors"
             >
               <PolarGrid
                 gridType="circle"
@@ -205,4 +207,4 @@ export function HousingChartComponent({ refresh }) {
       </CardContent>
     </Card>
   );
-}
+} 

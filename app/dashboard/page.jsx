@@ -22,6 +22,9 @@ import {
 import { HousingChartComponent } from "@/components/charts/housing";
 import { Piechartcomponent } from "@/components/charts/piechart";
 import { FoodChartComponent } from "@/components/charts/food";
+import { TransportationChartComponent } from "@/components/charts/transportation";
+import { EntertainmentChartComponent } from "@/components/charts/entertainment";
+import { OthersChartComponent } from "@/components/charts/others";
 import Chatbox from "@/components/Chatbox";
 
 export default function Page() {
@@ -29,6 +32,7 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expenses, setExpenses] = useState([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -62,6 +66,8 @@ export default function Page() {
       console.error('Error fetching expenses:', error.message, error.details);
     } else {
       setExpenses(data);
+      // Trigger a refresh in all chart components
+      setRefreshTrigger(prev => prev + 1);
     }
   };
 
@@ -91,12 +97,12 @@ export default function Page() {
       <SidebarInset>
         {/* Fixed background */}
         <div className="relative flex justify-center w-full pb-16">
-          <Image 
-            src="/pexels-adrien-olichon-1257089-2387793.jpg" 
-            alt="logo" 
-            layout="fill" 
-            objectFit="cover" 
-            className="absolute inset-0 z-0" 
+          <Image
+            src="/pexels-adrien-olichon-1257089-2387793.jpg"
+            alt="logo"
+            layout="fill"
+            objectFit="cover"
+            className="absolute inset-0 z-0"
           />
           <div className="relative z-10 w-full">
             {/* Main Content */}
@@ -109,17 +115,17 @@ export default function Page() {
                   <Breadcrumb>
                     <BreadcrumbList>
                       <BreadcrumbItem className=" md:block">
-                        <BreadcrumbLink 
-                          href="#" 
+                        <BreadcrumbLink
+                          href="#"
                           className="text-white transition-colors text-sm font-medium"
                         >
-                          Building Your Application
+                          Expense Dashboard
                         </BreadcrumbLink>
                       </BreadcrumbItem>
                       <BreadcrumbSeparator className="hidden md:block text-white" />
                       <BreadcrumbItem>
                         <BreadcrumbPage className="text-white text-sm font-semibold">
-                          Data Fetching
+                          Category Breakdown
                         </BreadcrumbPage>
                       </BreadcrumbItem>
                     </BreadcrumbList>
@@ -135,18 +141,31 @@ export default function Page() {
                     <Piechartcomponent expenses={expenses} />
                   </div>
 
-                  {/* Two-column Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-transparent backdrop-blur-lg shadow-lg rounded-xl p-6 border border-white/20">
-                      <HousingChartComponent expenses={expenses} />
+                  {/* Three-column Grid for main categories */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <HousingChartComponent refresh={refreshTrigger} />
                     </div>
-                    <div className="bg-transparent backdrop-blur-lg shadow-lg rounded-xl p-6 border border-white/20">
-                      <FoodChartComponent expenses={expenses} />
+                    <div>
+                      <FoodChartComponent refresh={refreshTrigger} />
+                    </div>
+                    <div>
+                      <TransportationChartComponent refresh={refreshTrigger} />
+                    </div>
+                  </div>
+
+                  {/* Two-column Grid for additional categories */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <EntertainmentChartComponent refresh={refreshTrigger} />
+                    </div>
+                    <div>
+                      <OthersChartComponent refresh={refreshTrigger} />
                     </div>
                   </div>
                 </div>
               </div>
-              
+
             </div>
           </div>
         </div>
