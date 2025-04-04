@@ -16,64 +16,69 @@ function ResetPasswordForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [validatingCode, setValidatingCode] = useState(true);
   const [success, setSuccess] = useState("");
   const [session, setSession] = useState(null);
   const [resetCode, setResetCode] = useState("");
+  const [codeVerified, setCodeVerified] = useState(false);
 
   useEffect(() => {
     console.log("ResetPassword page mounted");
+    let isMounted = true;
     
     // Get the code from URL query parameters (Next.js way)
-    const code = searchParams.get('code');
+    const code = searchParams?.get('code');
     console.log("Reset code from URL:", code);
     
     if (code) {
       setResetCode(code);
-    }
-
-    // Check session status
-    const checkSession = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Session error:", error);
-        } else if (data?.session) {
-          console.log("Active session found:", data.session);
-          setSession(data.session);
-        } else {
-          console.log("No active session found");
+      
+      // Immediately try to verify the OTP code
+      const verifyCode = async () => {
+        try {
+          console.log("Verifying reset code:", code);
+          setValidatingCode(true);
           
-          // If we have a reset code, we can verify it
-          if (code) {
-            try {
-              // Use the verification code to get a session
-              console.log("Verifying reset code...");
-              const { data, error } = await supabase.auth.verifyOtp({
-                type: 'recovery',
-                token: code,
-              });
-              
-              console.log("Reset code verification result:", { data, error });
-              
-              if (error) {
-                console.error("Code verification error:", error);
-                setError("Invalid or expired reset code. Please request a new password reset link.");
-              } else if (data?.session) {
-                console.log("Session established from reset code");
-                setSession(data.session);
-              }
-            } catch (err) {
-              console.error("Error verifying reset code:", err);
-            }
+          // Use the verification code to get a session
+          const { data, error } = await supabase.auth.verifyOtp({
+            type: 'recovery',
+            token: code,
+          });
+          
+          console.log("Reset code verification result:", { data, error });
+          
+          if (!isMounted) return;
+          
+          if (error) {
+            console.error("Code verification error:", error);
+            setError("Invalid or expired reset code. Please request a new password reset link.");
+            setValidatingCode(false);
+          } else if (data?.session) {
+            console.log("Session established from reset code");
+            setSession(data.session);
+            setCodeVerified(true);
+            setValidatingCode(false);
+          } else {
+            setError("Could not verify the reset code. Please request a new password reset link.");
+            setValidatingCode(false);
           }
+        } catch (err) {
+          if (!isMounted) return;
+          console.error("Error verifying reset code:", err);
+          setError("An error occurred while verifying your reset code. Please try again.");
+          setValidatingCode(false);
         }
-      } catch (err) {
-        console.error("Error checking session:", err);
-      }
+      };
+      
+      verifyCode();
+    } else {
+      setValidatingCode(false);
+      setError("No reset code found in URL. Please request a password reset link.");
+    }
+    
+    return () => {
+      isMounted = false;
     };
-
-    checkSession();
   }, [searchParams]);
 
   // handle form submission
@@ -113,12 +118,16 @@ function ResetPasswordForm() {
           setError(error.message);
         }
       } else {
+        console.log("Password updated successfully:", data);
         setSuccess("Password updated successfully! Redirecting to login...");
         
         // Clear query parameters from URL before redirecting
         if (typeof window !== "undefined") {
           window.history.replaceState(null, document.title, window.location.pathname);
         }
+        
+        // Sign out the user to clear the recovery session
+        await supabase.auth.signOut();
         
         setTimeout(() => router.push("/login"), 3000);
       }
@@ -129,6 +138,22 @@ function ResetPasswordForm() {
       setLoading(false);
     }
   };
+
+  if (validatingCode) {
+    return (
+      <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
+        <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
+          Verifying Reset Code
+        </h2>
+        <p className="mt-4 text-center text-white">
+          Please wait while we verify your password reset code...
+        </p>
+        <div className="flex justify-center mt-6">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
@@ -142,7 +167,7 @@ function ResetPasswordForm() {
       {error && (
         <div className="mt-4 text-red-500 text-center">
           {error}
-          {error.includes("Authentication") || error.includes("expired") ? (
+          {error.includes("Authentication") || error.includes("expired") || error.includes("reset code") ? (
             <div className="mt-2">
               <Button
                 onClick={() => router.push("/password-reset")}
@@ -156,50 +181,59 @@ function ResetPasswordForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
-        <div className="col-span-6">
-          <label htmlFor="password" className="block text-sm font-medium text-white">
-            New Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
+      {!error && (
+        <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
+          <div className="col-span-6">
+            <label htmlFor="password" className="block text-sm font-medium text-white">
+              New Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
 
-        <div className="col-span-6">
-          <label htmlFor="confirm-password" className="block text-sm font-medium text-white">
-            Confirm New Password
-          </label>
-          <input
-            id="confirm-password"
-            name="confirm-password"
-            type="password"
-            required
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
+          <div className="col-span-6">
+            <label htmlFor="confirm-password" className="block text-sm font-medium text-white">
+              Confirm New Password
+            </label>
+            <input
+              id="confirm-password"
+              name="confirm-password"
+              type="password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
 
-        {success && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
+          {success && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
 
-        <div className="col-span-6">
-          <Button
-            type="submit"
-            variant="attractive"
-            className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
-            disabled={loading}
-          >
-            {loading ? "Updating..." : "Update Password"}
-          </Button>
-        </div>
-      </form>
+          <div className="col-span-6">
+            <Button
+              type="submit"
+              variant="attractive"
+              className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                  <span>Updating Password...</span>
+                </div>
+              ) : (
+                "Update Password"
+              )}
+            </Button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
@@ -214,6 +248,9 @@ function ResetPasswordLoading() {
       <p className="mt-4 text-center text-white">
         Loading...
       </p>
+      <div className="flex justify-center mt-6">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
+      </div>
     </div>
   );
 }
