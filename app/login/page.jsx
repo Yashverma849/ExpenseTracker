@@ -15,7 +15,6 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
-  const [isResetMode, setIsResetMode] = useState(false);
 
   // handle form submission
   const handleSubmit = async (e) => {
@@ -24,81 +23,25 @@ export default function Login() {
     setError(null);
     setSuccess("");
 
-    if (isResetMode) {
-      // Handle password reset request
-      console.log(`Requesting password reset for email: ${email}`);
-      
-      try {
-        setLoading(true);
-        
-        // Use our server-side API instead of direct Supabase call
-        const response = await fetch('/api/reset-password', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ 
-            email,
-            // Include the explicit redirect URL for better control
-            redirectUrl: window.location.origin + '/reset-password'
-          }),
-        });
-        
-        const result = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(result.error || 'Failed to send reset email');
-        }
-        
-        console.log("Reset password response:", result);
-        setSuccess(
-          "Reset password link sent to your email. Please check your inbox and spam folders. " +
-          "The link will expire in 24 hours."
-        );
-      } catch (err) {
-        console.error("Exception during reset password:", err);
-        setError(`An unexpected error occurred: ${err.message}`);
-      } finally {
-        setLoading(false);
-      }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
     } else {
-      // Handle normal login
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      if (error) {
-        setError(error.message);
-        setLoading(false);
+      if (user) {
+        setSuccess("Login successful! Redirecting...");
+        setTimeout(() => router.push("/dashboard"), 2000); // Redirect after 2 seconds
       } else {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (user) {
-          setSuccess("Login successful! Redirecting...");
-          setTimeout(() => router.push("/dashboard"), 2000); // Redirect after 2 seconds
-        } else {
-          setError("Failed to authenticate user.");
-        }
-        setLoading(false);
+        setError("Failed to authenticate user.");
       }
+      setLoading(false);
     }
   };
-
-  // Toggle between login and reset password modes
-  const toggleResetMode = (e) => {
-    e.preventDefault();
-    setIsResetMode(!isResetMode);
-    setError(null);
-    setSuccess("");
-  };
-  
-  // NOTE: If password reset emails are still redirecting to Supabase's domain instead of your app:
-  // 1. Go to the Supabase dashboard: https://app.supabase.io
-  // 2. Navigate to Authentication > URL Configuration
-  // 3. Set "Site URL" to your website's URL (e.g., http://localhost:3000 for development)
-  // 4. Add additional redirect URLs if needed (e.g., https://your-production-domain.com)
-  // 5. Save the changes
-  // This ensures password reset links and other auth redirects point to your app
 
   return (
     <section
@@ -114,7 +57,7 @@ export default function Login() {
         <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:px-16 lg:py-12">
           <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
             <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
-              {isResetMode ? "Reset your password" : "Sign in to your account"}
+              Sign in to your account
             </h2>
 
             <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
@@ -134,31 +77,26 @@ export default function Login() {
                 />
               </div>
 
-              {!isResetMode && (
-                <div className="col-span-6">
-                  <div className="flex items-center justify-between">
-                    <label htmlFor="password" className="block text-sm font-medium text-white">
-                      Password
-                    </label>
-                    <button 
-                      onClick={toggleResetMode} 
-                      className="text-sm font-semibold text-indigo-400 hover:text-indigo-300"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                  />
+              <div className="col-span-6">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="password" className="block text-sm font-medium text-white">
+                    Password
+                  </label>
+                  <a href="#" className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
+                    Forgot password?
+                  </a>
                 </div>
-              )}
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
 
               {error && <div className="col-span-6 text-red-500 text-sm text-center">{error}</div>}
               {success && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
@@ -170,22 +108,9 @@ export default function Login() {
                   className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
                   disabled={loading}
                 >
-                  {loading 
-                    ? (isResetMode ? "Sending..." : "Signing in...") 
-                    : (isResetMode ? "Send Reset Link" : "Sign in")}
+                  {loading ? "Signing in..." : "Sign in"}
                 </Button>
               </div>
-              
-              {isResetMode && (
-                <div className="col-span-6 text-center">
-                  <button 
-                    onClick={toggleResetMode}
-                    className="text-sm font-medium text-indigo-400 hover:text-indigo-300"
-                  >
-                    Back to login
-                  </button>
-                </div>
-              )}
             </form>
           </div>
         </main>
