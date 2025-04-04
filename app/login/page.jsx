@@ -27,11 +27,13 @@ export default function Login() {
     if (isResetMode) {
       // Handle password reset request
       console.log(`Requesting password reset for email: ${email}`);
-      console.log(`Redirect URL: ${window.location.origin}/reset-password`);
+      const redirectUrl = `${window.location.origin}/reset-password`;
+      console.log(`Redirect URL: ${redirectUrl}`);
       
       try {
+        // Ensure we're using the correct redirect URL with the properly encoded origin
         const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: redirectUrl,
         });
         
         console.log("Reset password response:", data ? "Data received" : "No data", error || "No error");
@@ -82,6 +84,14 @@ export default function Login() {
     setError(null);
     setSuccess("");
   };
+  
+  // NOTE: If password reset emails are still redirecting to Supabase's domain instead of your app:
+  // 1. Go to the Supabase dashboard: https://app.supabase.io
+  // 2. Navigate to Authentication > URL Configuration
+  // 3. Set "Site URL" to your website's URL (e.g., http://localhost:3000 for development)
+  // 4. Add additional redirect URLs if needed (e.g., https://your-production-domain.com)
+  // 5. Save the changes
+  // This ensures password reset links and other auth redirects point to your app
 
   return (
     <section
