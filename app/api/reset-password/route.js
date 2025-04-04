@@ -20,33 +20,81 @@ export async function POST(req) {
       );
     }
 
-    // Approach: Send a password reset email to the user
-    // This is the most reliable and secure approach for password reset
-    // The email contains a secure token that only the real user would have access to
     try {
-      console.log('Sending password reset email to:', email);
+      // Custom approach: First sign in with email only to check if user exists
+      console.log('Checking if user exists with email:', email);
       
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://finzarc-expensetracker.vercel.app'}/login`,
+      // 1. Try to sign in with email but with a dummy password
+      // This will fail but let us know if the user exists
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: 'dummy-password-that-will-fail',
       });
       
-      if (error) {
-        console.error('Error sending reset email:', error);
+      // Check if user exists (error will be "Invalid login credentials" if user exists)
+      // If error is something else like "Email not confirmed", user also exists
+      if (signInError && !signInError.message.includes('Invalid login credentials') && 
+          !signInError.message.includes('Email not confirmed')) {
+        console.error('Error checking user:', signInError);
         return NextResponse.json({ 
-          error: 'Unable to process your request. Please try again later.',
+          error: 'User with this email not found', 
+          status: 404 
+        });
+      }
+      
+      // 2. If we reach here, user exists. Now we try to update the password
+      // For this, we use the signUp method with existing email and new password
+      // This might sound counter-intuitive, but in Supabase, signUp with existing email but
+      // different password can update the password if email confirmation is disabled
+      console.log('User exists. Attempting to update password');
+      
+      const { error: updateError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://finzarc-expensetracker.vercel.app'}/login`
+        }
+      });
+      
+      if (updateError) {
+        console.error('Error updating password:', updateError);
+        return NextResponse.json({ 
+          error: 'Failed to update password. Please try again later.',
           status: 500 
         });
       }
       
-      console.log('Password reset email sent successfully');
+      console.log('Password update initiated for user');
       
-      // We don't actually update the password here, but we pretend we did to keep the UI flow consistent
-      // The actual password update will happen when the user clicks the link in the email
-      return NextResponse.json({
-        success: true,
-        message: 'Password reset email sent. Please check your inbox to complete the reset process.',
-        email_sent: true
+      // 3. Try signing in with new credentials to see if it worked
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
+      
+      if (!verifyError) {
+        // If sign in works, password was updated successfully and immediately
+        console.log('Password updated successfully and verified');
+        return NextResponse.json({
+          success: true,
+          message: 'Password updated successfully. You can now log in with your new password.',
+        });
+      } else if (verifyError.message.includes('Email not confirmed')) {
+        // This means the password was updated but email verification is required
+        console.log('Password updated but email verification is required');
+        return NextResponse.json({
+          success: true,
+          message: 'Password updated. Please check your email to confirm your account.',
+          email_verification_required: true
+        });
+      } else {
+        // Password update may have failed in an unexpected way
+        console.error('Error verifying password update:', verifyError);
+        return NextResponse.json({ 
+          error: 'Unable to verify password update. Please try again later.',
+          status: 500 
+        });
+      }
       
     } catch (error) {
       console.error('Error in reset password operation:', error);

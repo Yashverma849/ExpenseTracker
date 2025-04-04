@@ -18,7 +18,7 @@ function ResetPasswordContent() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [passwordResetComplete, setPasswordResetComplete] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
+  const [emailVerificationRequired, setEmailVerificationRequired] = useState(false);
 
   useEffect(() => {
     // Redirect to forgot-password if no email is provided
@@ -66,8 +66,8 @@ function ResetPasswordContent() {
       // Show success message
       setSuccess(data.message || "Password reset initiated successfully.");
       
-      if (data.email_sent) {
-        setEmailSent(true);
+      if (data.email_verification_required) {
+        setEmailVerificationRequired(true);
       } else {
         setPasswordResetComplete(true);
         // Redirect to login after 3 seconds
@@ -93,7 +93,7 @@ function ResetPasswordContent() {
       <div className="flex flex-grow items-center justify-center">
         <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:px-16 lg:py-12">
           <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
-            {!passwordResetComplete && !emailSent ? (
+            {!passwordResetComplete && !emailVerificationRequired ? (
               <>
                 <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
                   Reset Your Password
@@ -136,7 +136,7 @@ function ResetPasswordContent() {
                   </div>
 
                   {error && <div className="col-span-6 text-red-500 text-sm text-center">{error}</div>}
-                  {success && !passwordResetComplete && !emailSent && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
+                  {success && !passwordResetComplete && !emailVerificationRequired && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
 
                   <div className="col-span-6">
                     <Button
@@ -159,15 +159,15 @@ function ResetPasswordContent() {
                   </div>
                 </form>
               </>
-            ) : emailSent ? (
+            ) : emailVerificationRequired ? (
               <div className="text-center">
-                <h2 className="text-2xl font-bold text-white mb-6">Check Your Email</h2>
+                <h2 className="text-2xl font-bold text-white mb-6">Email Verification Required</h2>
                 <div className="bg-indigo-900 bg-opacity-50 p-6 rounded-lg mb-6">
                   <p className="text-white mb-4">
-                    We've sent a password reset link to <span className="font-semibold">{email}</span>
+                    We've sent a verification email to <span className="font-semibold">{email}</span>
                   </p>
                   <p className="text-white">
-                    Please check your inbox and follow the instructions to complete your password reset.
+                    Please check your inbox and click the verification link to activate your account with the new password.
                   </p>
                 </div>
                 <Button
