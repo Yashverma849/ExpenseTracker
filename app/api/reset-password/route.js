@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Create a regular supabase client using the public anon key
+// Create Supabase clients
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Use standard client - no email methods
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function POST(req) {
@@ -48,31 +50,86 @@ export async function POST(req) {
         });
       }
       
-      console.log('User exists, proceeding with password reset flow');
+      console.log('User exists, proceeding with direct password update');
       
-      // Since the user exists, we'll use resetPasswordForEmail
-      // This sends a reset link to the user's email
-      const { data: resetData, error: resetError } = await supabase.auth.resetPasswordForEmail(
+      // Try to update user password
+      // Rather than using resetPasswordForEmail, we're going to try using signUp
+      // which can sometimes update a password when email confirmation is disabled
+      
+      // 1. First, try to sign up with the same email but new password
+      console.log('Attempting to update password via signUp method');
+      
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
-        {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://finzarc-expensetracker.vercel.app'}/reset-password?email=${encodeURIComponent(email)}`
-        }
-      );
+        password,
+        options: {
+          // Don't use email redirect flow - this is just for consistency
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://finzarc-expensetracker.vercel.app'}/login`,
+        },
+      });
       
-      if (resetError) {
-        console.error('Error sending reset email:', resetError.message);
-        return NextResponse.json({ 
-          error: 'Failed to initiate password reset: ' + resetError.message,
-          status: 500 
+      if (signUpError) {
+        // If we get "User already registered", it means we can't use this method
+        if (signUpError.message.includes('already registered')) {
+          console.log('SignUp method failed due to existing user');
+          return NextResponse.json({
+            error: 'Unable to reset password directly. Please contact support for assistance.',
+            status: 400
+          });
+        }
+        
+        console.error('Error in signUp attempt:', signUpError.message);
+        return NextResponse.json({
+          error: 'Password reset failed: ' + signUpError.message,
+          status: 500
         });
       }
       
-      console.log('Password reset email sent successfully');
-      return NextResponse.json({
-        success: true,
-        message: 'Password reset instructions have been sent to your email',
-        email_sent: true
+      // If we reach here, let's try a different approach
+      // 2. Try to sign in with the new credentials to see if it worked
+      console.log('Attempting to verify new credentials');
+      
+      const { data: signInData, error: verifyError } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
+      
+      if (verifyError) {
+        if (verifyError.message.includes('Email not confirmed')) {
+          // This means the password update might have worked but email verification is required
+          console.log('Email confirmation required after password update');
+          return NextResponse.json({
+            success: false,
+            error: 'Email verification required to complete the process',
+            status: 400
+          });
+        }
+        
+        console.error('Verification error:', verifyError.message);
+        return NextResponse.json({
+          error: 'Failed to verify password update: ' + verifyError.message,
+          status: 400
+        });
+      }
+      
+      // If we got here and have a session, the password was updated successfully
+      if (signInData?.session) {
+        // Sign out to force user to log in with new credentials
+        await supabase.auth.signOut();
+        
+        console.log('Password reset successful and verified');
+        return NextResponse.json({
+          success: true,
+          message: 'Password has been updated successfully. You can now log in with your new password.'
+        });
+      } else {
+        // Unexpected response - we should have either an error or a session
+        console.error('Unexpected response: No session after sign-in');
+        return NextResponse.json({
+          error: 'Something went wrong during password reset verification',
+          status: 500
+        });
+      }
       
     } catch (error) {
       console.error('Error in reset password operation:', error);

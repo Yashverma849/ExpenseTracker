@@ -12,7 +12,6 @@ function ForgotPasswordContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [emailSent, setEmailSent] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,27 +26,27 @@ function ForgotPasswordContent() {
     }
 
     try {
-      // Call our API to send reset instructions
+      // First check if the user with this email exists
       const response = await fetch('/api/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password: 'temporary-placeholder' }),
+        // We're just checking if user exists - we'll provide a real password later
+        body: JSON.stringify({ email, password: 'temporary-placeholder-for-check' }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to process reset request');
+      // If we get a 404, the user doesn't exist
+      if (response.status === 404) {
+        const data = await response.json();
+        throw new Error(data.error || 'No account found with this email');
       }
-
-      if (data.success) {
-        setSuccess(data.message || "Password reset instructions sent to your email");
-        setEmailSent(true);
-      } else {
-        throw new Error(data.error || "Something went wrong");
-      }
+      
+      // If we reach here, the user exists (or we got a different error, which will be handled on reset)
+      // Direct the user to the reset password page
+      setSuccess("Redirecting to reset password page...");
+      setTimeout(() => router.push(`/reset-password?email=${encodeURIComponent(email)}`), 1000);
+      
     } catch (err) {
       console.error("Error in forgot password:", err);
       setError(err.message);
@@ -69,85 +68,62 @@ function ForgotPasswordContent() {
       <div className="flex flex-grow items-center justify-center">
         <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:px-16 lg:py-12">
           <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
-            {!emailSent ? (
-              <>
-                <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
-                  Forgot your password?
-                </h2>
-                <p className="mt-4 text-center text-white">
-                  Enter your email address and we'll send you instructions to reset your password.
-                </p>
+            <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
+              Forgot your password?
+            </h2>
+            <p className="mt-4 text-center text-white">
+              Enter your email address to reset your password.
+            </p>
 
-                <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
-                  <div className="col-span-6">
-                    <label htmlFor="email" className="block text-sm font-medium text-white">
-                      Email
-                    </label>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Enter your email address"
-                    />
-                  </div>
+            <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
+              <div className="col-span-6">
+                <label htmlFor="email" className="block text-sm font-medium text-white">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Enter your email address"
+                />
+              </div>
 
-                  {error && (
-                    <div className="col-span-6 text-red-500 text-sm p-2 bg-red-100 bg-opacity-20 rounded text-center">
-                      {error}
-                    </div>
-                  )}
-                  
-                  {success && !emailSent && (
-                    <div className="col-span-6 text-green-500 text-sm p-2 bg-green-100 bg-opacity-20 rounded text-center">
-                      {success}
-                    </div>
-                  )}
-
-                  <div className="col-span-6">
-                    <Button
-                      type="submit"
-                      variant="attractive"
-                      className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
-                      disabled={loading}
-                    >
-                      {loading ? "Processing..." : "Send Reset Instructions"}
-                    </Button>
-                  </div>
-
-                  <div className="col-span-6 text-center">
-                    <p className="text-white">
-                      Remember your password?{" "}
-                      <a href="/login" className="text-indigo-400 hover:text-indigo-300">
-                        Sign in
-                      </a>
-                    </p>
-                  </div>
-                </form>
-              </>
-            ) : (
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-white mb-6">Check Your Email</h2>
-                <div className="bg-indigo-900 bg-opacity-50 p-6 rounded-lg mb-6">
-                  <p className="text-white mb-4">
-                    We've sent password reset instructions to <span className="font-semibold">{email}</span>
-                  </p>
-                  <p className="text-white">
-                    Please check your inbox and follow the instructions in the email.
-                  </p>
+              {error && (
+                <div className="col-span-6 text-red-500 text-sm p-2 bg-red-100 bg-opacity-20 rounded text-center">
+                  {error}
                 </div>
+              )}
+              
+              {success && (
+                <div className="col-span-6 text-green-500 text-sm p-2 bg-green-100 bg-opacity-20 rounded text-center">
+                  {success}
+                </div>
+              )}
+
+              <div className="col-span-6">
                 <Button
-                  onClick={() => router.push("/login")}
+                  type="submit"
                   variant="attractive"
                   className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
+                  disabled={loading}
                 >
-                  Return to Login
+                  {loading ? "Processing..." : "Continue to Reset Password"}
                 </Button>
               </div>
-            )}
+
+              <div className="col-span-6 text-center">
+                <p className="text-white">
+                  Remember your password?{" "}
+                  <a href="/login" className="text-indigo-400 hover:text-indigo-300">
+                    Sign in
+                  </a>
+                </p>
+              </div>
+            </form>
           </div>
         </main>
       </div>

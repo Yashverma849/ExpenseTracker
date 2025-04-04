@@ -18,7 +18,6 @@ function ResetPasswordContent() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [passwordResetComplete, setPasswordResetComplete] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
 
   useEffect(() => {
     // Redirect to forgot-password if no email is provided
@@ -58,6 +57,7 @@ function ResetPasswordContent() {
       });
 
       const data = await response.json();
+      console.log("Password reset API response:", data);
 
       if (!response.ok) {
         // If we get a non-2xx response, treat it as an error
@@ -68,15 +68,10 @@ function ResetPasswordContent() {
       // Check if the API reported success
       if (data.success) {
         // Show success message
-        setSuccess(data.message || "Password reset initiated successfully.");
-        
-        if (data.email_sent) {
-          setEmailSent(true);
-        } else {
-          setPasswordResetComplete(true);
-          // Redirect to login after 3 seconds
-          setTimeout(() => router.push("/login"), 3000);
-        }
+        setSuccess(data.message || "Password reset successful!");
+        setPasswordResetComplete(true);
+        // Redirect to login after 3 seconds
+        setTimeout(() => router.push("/login"), 3000);
       } else {
         // The API returned a 2xx status but indicated failure in the response body
         throw new Error(data.error || "Password reset failed");
@@ -102,7 +97,7 @@ function ResetPasswordContent() {
       <div className="flex flex-grow items-center justify-center">
         <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:px-16 lg:py-12">
           <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
-            {!passwordResetComplete && !emailSent ? (
+            {!passwordResetComplete ? (
               <>
                 <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
                   Reset Your Password
@@ -150,7 +145,7 @@ function ResetPasswordContent() {
                     </div>
                   )}
                   
-                  {success && !passwordResetComplete && !emailSent && (
+                  {success && !passwordResetComplete && (
                     <div className="col-span-6 text-green-500 text-sm p-2 bg-green-100 bg-opacity-20 rounded text-center">
                       {success}
                     </div>
@@ -177,25 +172,6 @@ function ResetPasswordContent() {
                   </div>
                 </form>
               </>
-            ) : emailSent ? (
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-white mb-6">Check Your Email</h2>
-                <div className="bg-indigo-900 bg-opacity-50 p-6 rounded-lg mb-6">
-                  <p className="text-white mb-4">
-                    We've sent a password reset link to <span className="font-semibold">{email}</span>
-                  </p>
-                  <p className="text-white">
-                    Please check your inbox and follow the instructions to complete your password reset.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => router.push("/login")}
-                  variant="attractive"
-                  className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
-                >
-                  Return to Login
-                </Button>
-              </div>
             ) : (
               <div className="text-center">
                 <h2 className="text-2xl font-bold text-white mb-6">Password Reset Complete</h2>
