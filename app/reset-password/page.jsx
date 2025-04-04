@@ -16,87 +16,68 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [session, setSession] = useState(null);
-  const [hash, setHash] = useState("");
-  const [accessToken, setAccessToken] = useState("");
+  const [hashParams, setHashParams] = useState({});
+  const [type, setType] = useState("");
 
   useEffect(() => {
     console.log("ResetPassword page mounted");
     
-    // Get the hash from the URL if it exists (Supabase auth redirects with hash parameters)
+    // Function to parse hash parameters
+    const parseHashParams = (hash) => {
+      if (!hash || hash === "") return {};
+      
+      // Remove the leading # character
+      const hashStr = hash.substring(1);
+      // Parse the hash string to get parameters
+      const params = {};
+      const searchParams = new URLSearchParams(hashStr);
+      
+      for (const [key, value] of searchParams.entries()) {
+        params[key] = value;
+      }
+      
+      return params;
+    };
+    
+    // Get and parse hash parameters from URL
     if (typeof window !== "undefined") {
       console.log("Current URL:", window.location.href);
+      const hashStr = window.location.hash;
+      console.log("URL hash:", hashStr);
       
-      // Extract access token from URL if present
-      const hashParams = window.location.hash;
-      console.log("URL hash parameters:", hashParams);
-      
-      if (hashParams) {
-        setHash(hashParams);
+      if (hashStr) {
+        // Parse hash parameters
+        const params = parseHashParams(hashStr);
+        console.log("Parsed hash parameters:", params);
+        setHashParams(params);
         
-        // Try to extract the access token
-        const params = new URLSearchParams(hashParams.substring(1)); // Remove the # character
-        const token = params.get("access_token");
-        if (token) {
-          console.log("Found access token in URL");
-          setAccessToken(token);
+        // Check if type parameter exists (Supabase uses 'type=recovery')
+        if (params.type) {
+          setType(params.type);
         }
       }
     }
 
+    // Check session status
     const checkSession = async () => {
       try {
-        // Check if we have a session already
-        console.log("Checking authentication session...");
-        const { data, error: sessionError } = await supabase.auth.getSession();
-        console.log("Session data:", data);
+        const { data, error } = await supabase.auth.getSession();
         
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          setError("Error checking authentication session.");
-          return;
-        }
-
-        if (data?.session) {
-          console.log("Active session found:", data.session.user.email);
+        if (error) {
+          console.error("Session error:", error);
+        } else if (data?.session) {
+          console.log("Active session found:", data.session);
           setSession(data.session);
         } else {
-          console.log("No active session found, checking for auth callback...");
-          // If no session, check if we're in the auth callback flow
-          if (hash) {
-            try {
-              console.log("Processing authentication callback...");
-              // Exchange the access token in the URL for a session
-              const { data: refreshData, error: callbackError } = await supabase.auth.refreshSession();
-              console.log("Refresh session result:", { refreshData, callbackError });
-              
-              if (callbackError) {
-                console.error("Auth callback error:", callbackError);
-                // Don't set an error, let user try password reset anyway
-              } else {
-                // Get the session again after refresh
-                console.log("Session refreshed, getting updated session...");
-                const { data: refreshedSession } = await supabase.auth.getSession();
-                console.log("Updated session data:", refreshedSession);
-                
-                if (refreshedSession?.session) {
-                  console.log("Session established after refresh");
-                  setSession(refreshedSession.session);
-                }
-              }
-            } catch (err) {
-              console.error("Auth handling error:", err);
-              // Don't set an error, let user try password reset anyway
-            }
-          }
+          console.log("No active session found");
         }
       } catch (err) {
-        console.error("Session check error:", err);
-        // Continue anyway, let user try password reset
+        console.error("Error checking session:", err);
       }
     };
 
     checkSession();
-  }, [hash]);
+  }, []);
 
   // handle form submission
   const handleSubmit = async (e) => {
@@ -117,46 +98,53 @@ export default function ResetPassword() {
     setSuccess("");
 
     try {
-      console.log("Updating password...");
-      
-      let updateResult;
-      
-      // If we have a session, use updateUser directly
-      if (session) {
-        console.log("Using session to update password");
-        updateResult = await supabase.auth.updateUser({
-          password: password,
-        });
-      } 
-      // If we have an access token from the URL, try to use it
-      else if (accessToken) {
-        console.log("Using access token to update password");
-        // Set the auth token manually first
-        supabase.auth.setSession({ access_token: accessToken, refresh_token: '' });
-        updateResult = await supabase.auth.updateUser({
-          password: password,
-        });
-      }
-      // Fallback to just trying the update (works in some Supabase versions)
-      else {
-        console.log("Attempting password update without session");
-        updateResult = await supabase.auth.updateUser({
-          password: password,
-        });
-      }
-      
-      const { data, error } = updateResult || { error: { message: "Failed to update password" } };
-      console.log("Update password result:", { data, error });
+      console.log("Attempting to update password");
+      let result;
 
+      // If there's a recovery token in the URL, try to use it directly
+      if (hashParams.access_token && type === "recovery") {
+        // Set up a temporary auth session using the token
+        console.log("Setting up auth with recovery token");
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: hashParams.access_token,
+          refresh_token: hashParams.refresh_token || "",
+        });
+
+        if (sessionError) {
+          console.error("Error setting session:", sessionError);
+        }
+      }
+
+      // Now attempt to update the password
+      console.log("Updating password...");
+      result = await supabase.auth.updateUser({ password });
+      
+      console.log("Update result:", result);
+      
+      const { error } = result;
+      
       if (error) {
-        setError(error.message);
+        console.error("Password update error:", error);
+        
+        // Special handling for common errors
+        if (error.message.includes("session")) {
+          setError("Authentication error. Please request a new password reset link.");
+        } else {
+          setError(error.message);
+        }
       } else {
         setSuccess("Password updated successfully! Redirecting to login...");
+        
+        // Clear any hash/token from URL before redirecting
+        if (typeof window !== "undefined") {
+          window.history.replaceState(null, document.title, window.location.pathname);
+        }
+        
         setTimeout(() => router.push("/login"), 3000);
       }
     } catch (err) {
-      console.error("Password update error:", err);
-      setError("An error occurred. Please try again.");
+      console.error("Error updating password:", err);
+      setError("An error occurred. Please try again or request a new password reset link.");
     } finally {
       setLoading(false);
     }
@@ -185,7 +173,7 @@ export default function ResetPassword() {
             {error && (
               <div className="mt-4 text-red-500 text-center">
                 {error}
-                {!session && !accessToken && (
+                {error.includes("Authentication") && (
                   <div className="mt-2">
                     <Button
                       onClick={() => router.push("/password-reset")}
@@ -199,7 +187,6 @@ export default function ResetPassword() {
               </div>
             )}
 
-            {/* Always show the form regardless of session state */}
             <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
               <div className="col-span-6">
                 <label htmlFor="password" className="block text-sm font-medium text-white">
