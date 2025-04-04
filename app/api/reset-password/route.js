@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 
 export async function POST(request) {
   try {
-    const { email } = await request.json();
+    const { email, redirectUrl: requestRedirectUrl } = await request.json();
     
     if (!email) {
       return NextResponse.json(
@@ -16,8 +16,16 @@ export async function POST(request) {
     
     // Get the host from the request headers
     const host = request.headers.get('host');
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    const redirectUrl = `${protocol}://${host}/reset-password`;
+    // Detect if we're on Vercel production
+    const isProduction = !host.includes('localhost') && (
+      host.includes('vercel.app') || 
+      host.includes('finzarc-expensetracker')
+    );
+    
+    // Use the explicit production URL for Vercel deployments or the one provided in the request
+    const redirectUrl = requestRedirectUrl || (isProduction
+      ? 'https://finzarc-expensetracker.vercel.app/reset-password'
+      : `http://${host}/reset-password`);
     
     console.log('Server API: Using redirect URL:', redirectUrl);
     

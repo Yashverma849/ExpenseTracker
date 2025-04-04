@@ -37,7 +37,11 @@ export default function Login() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email }),
+          body: JSON.stringify({ 
+            email,
+            // Include the explicit redirect URL for better control
+            redirectUrl: window.location.origin + '/reset-password'
+          }),
         });
         
         const result = await response.json();
