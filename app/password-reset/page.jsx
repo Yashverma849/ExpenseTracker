@@ -49,9 +49,14 @@ export default function PasswordReset() {
       console.log("Reset password response:", { data, error });
 
       if (error) {
-        setError(error.message);
+        if (error.message.includes("unable to find user")) {
+          // Don't reveal if an email exists or not for security reasons
+          setSuccess("If an account exists with this email, a password reset link has been sent. Please check your inbox and spam folder.");
+        } else {
+          setError(error.message);
+        }
       } else {
-        setSuccess("Password reset email sent! Please check your inbox.");
+        setSuccess("Password reset email sent! Please check your inbox and spam folder.");
       }
     } catch (err) {
       console.error("Password reset error:", err);
@@ -99,7 +104,14 @@ export default function PasswordReset() {
               </div>
 
               {error && <div className="col-span-6 text-red-500 text-sm text-center">{error}</div>}
-              {success && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
+              {success && (
+                <div className="col-span-6 text-green-500 text-sm text-center">
+                  {success}
+                  <p className="mt-2 text-white">
+                    Didn't receive the email? Check your spam folder or try again in a few minutes.
+                  </p>
+                </div>
+              )}
 
               <div className="col-span-6">
                 <Button
@@ -108,7 +120,14 @@ export default function PasswordReset() {
                   className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
                   disabled={loading}
                 >
-                  {loading ? "Sending..." : "Send Reset Link"}
+                  {loading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                      <span>Sending...</span>
+                    </div>
+                  ) : (
+                    "Send Reset Link"
+                  )}
                 </Button>
               </div>
 
