@@ -48,79 +48,31 @@ export async function POST(req) {
         });
       }
       
-      // Now try to reset the password using the admin API
-      // Since we can't use the admin API, we'll try the signUp method as an alternative
-      console.log('Attempting password reset via signUp...');
+      console.log('User exists, proceeding with password reset flow');
       
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      // Since the user exists, we'll use resetPasswordForEmail
+      // This sends a reset link to the user's email
+      const { data: resetData, error: resetError } = await supabase.auth.resetPasswordForEmail(
         email,
-        password,
-        options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://finzarc-expensetracker.vercel.app'}/login`
+        {
+          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://finzarc-expensetracker.vercel.app'}/reset-password?email=${encodeURIComponent(email)}`
         }
-      });
+      );
       
-      // Log signup response for debugging
-      console.log('Sign-up response:', signUpData ? 'Data exists' : 'No data');
-      if (signUpError) {
-        console.error('Sign-up error:', signUpError.message);
+      if (resetError) {
+        console.error('Error sending reset email:', resetError.message);
         return NextResponse.json({ 
-          error: 'Failed to reset password: ' + signUpError.message,
+          error: 'Failed to initiate password reset: ' + resetError.message,
           status: 500 
         });
       }
       
-      // Check if we need to verify the email
-      if (signUpData?.session === null && signUpData?.user?.identities?.length === 0) {
-        // This likely means the user already exists and needs email verification
-        console.log('User exists but needs email verification');
-        return NextResponse.json({
-          success: true,
-          message: 'A verification email has been sent. Please check your inbox.',
-          email_verification_required: true
-        });
-      }
-      
-      // If we reach here, try to sign in with the new password to confirm it worked
-      console.log('Attempting to sign in with new credentials to verify...');
-      const { data: verifyData, error: verifyError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      console.log('Password reset email sent successfully');
+      return NextResponse.json({
+        success: true,
+        message: 'Password reset instructions have been sent to your email',
+        email_sent: true
       });
-      
-      if (verifyError) {
-        console.error('Verification error:', verifyError.message);
-        if (verifyError.message.includes('Email not confirmed')) {
-          return NextResponse.json({
-            success: true,
-            message: 'Password updated. Please check your email to confirm your account.',
-            email_verification_required: true
-          });
-        } else {
-          // The password was not actually updated
-          return NextResponse.json({ 
-            error: 'Password reset failed: ' + verifyError.message,
-            status: 400
-          });
-        }
-      }
-      
-      if (verifyData?.session) {
-        // Success! Sign out to make the user sign in manually
-        await supabase.auth.signOut();
-        console.log('Password reset successful and verified');
-        return NextResponse.json({
-          success: true,
-          message: 'Password updated successfully. You can now log in with your new password.',
-        });
-      } else {
-        // Something unexpected happened
-        console.error('Unexpected result: No session after sign-in');
-        return NextResponse.json({ 
-          error: 'Password reset was incomplete. Please try again.',
-          status: 500 
-        });
-      }
       
     } catch (error) {
       console.error('Error in reset password operation:', error);
