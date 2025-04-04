@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import Header from "../_components/Header";
 import { Button } from "@/components/ui/button";
 
-export default function ResetPassword() {
+// Create a client component that uses useSearchParams
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -130,6 +131,96 @@ export default function ResetPassword() {
   };
 
   return (
+    <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
+      <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
+        Set New Password
+      </h2>
+      <p className="mt-4 text-center text-white">
+        Enter and confirm your new password below.
+      </p>
+
+      {error && (
+        <div className="mt-4 text-red-500 text-center">
+          {error}
+          {error.includes("Authentication") || error.includes("expired") ? (
+            <div className="mt-2">
+              <Button
+                onClick={() => router.push("/password-reset")}
+                variant="attractive"
+                className="px-3 py-2 text-sm font-medium rounded-md shadow-sm"
+              >
+                Request New Reset Link
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
+        <div className="col-span-6">
+          <label htmlFor="password" className="block text-sm font-medium text-white">
+            New Password
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div className="col-span-6">
+          <label htmlFor="confirm-password" className="block text-sm font-medium text-white">
+            Confirm New Password
+          </label>
+          <input
+            id="confirm-password"
+            name="confirm-password"
+            type="password"
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        {success && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
+
+        <div className="col-span-6">
+          <Button
+            type="submit"
+            variant="attractive"
+            className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
+            disabled={loading}
+          >
+            {loading ? "Updating..." : "Update Password"}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// Loading fallback for the Suspense boundary
+function ResetPasswordLoading() {
+  return (
+    <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
+      <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
+        Set New Password
+      </h2>
+      <p className="mt-4 text-center text-white">
+        Loading...
+      </p>
+    </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function ResetPassword() {
+  return (
     <section
       className="min-h-screen flex flex-col bg-cover bg-center"
       style={{
@@ -141,76 +232,9 @@ export default function ResetPassword() {
       <Header />
       <div className="flex flex-grow items-center justify-center">
         <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:px-16 lg:py-12">
-          <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
-            <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
-              Set New Password
-            </h2>
-            <p className="mt-4 text-center text-white">
-              Enter and confirm your new password below.
-            </p>
-
-            {error && (
-              <div className="mt-4 text-red-500 text-center">
-                {error}
-                {error.includes("Authentication") || error.includes("expired") ? (
-                  <div className="mt-2">
-                    <Button
-                      onClick={() => router.push("/password-reset")}
-                      variant="attractive"
-                      className="px-3 py-2 text-sm font-medium rounded-md shadow-sm"
-                    >
-                      Request New Reset Link
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
-              <div className="col-span-6">
-                <label htmlFor="password" className="block text-sm font-medium text-white">
-                  New Password
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div className="col-span-6">
-                <label htmlFor="confirm-password" className="block text-sm font-medium text-white">
-                  Confirm New Password
-                </label>
-                <input
-                  id="confirm-password"
-                  name="confirm-password"
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              {success && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
-
-              <div className="col-span-6">
-                <Button
-                  type="submit"
-                  variant="attractive"
-                  className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
-                  disabled={loading}
-                >
-                  {loading ? "Updating..." : "Update Password"}
-                </Button>
-              </div>
-            </form>
-          </div>
+          <Suspense fallback={<ResetPasswordLoading />}>
+            <ResetPasswordForm />
+          </Suspense>
         </main>
       </div>
     </section>
