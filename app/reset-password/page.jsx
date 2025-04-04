@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "../../lib/supabaseClient";
+import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../_components/Header";
 import { Button } from "@/components/ui/button";
 
 export default function ResetPassword() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get("email");
 
   // state variables
   const [password, setPassword] = useState("");
@@ -16,38 +17,55 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
 
+  useEffect(() => {
+    // Redirect to forgot-password if no email is provided
+    if (!email) {
+      router.push("/forgot-password");
+    }
+  }, [email, router]);
+
   // handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-    
-    if (password.length < 6) {
-      setError("Password should be at least 6 characters long.");
-      return;
-    }
-    
     setLoading(true);
     setError(null);
     setSuccess("");
 
+    // Validate passwords
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      setLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
+      // Call our custom API endpoint to reset the password
+      const response = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) {
-        setError(error.message);
-      } else {
-        setSuccess("Password updated successfully! Redirecting to login...");
-        setTimeout(() => router.push("/login"), 2000);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to reset password');
       }
+
+      setSuccess(data.message || "Password updated successfully! Redirecting to dashboard...");
+      
+      // Wait 3 seconds before redirecting to dashboard
+      setTimeout(() => router.push("/dashboard"), 3000);
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
-      console.error(err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -67,11 +85,13 @@ export default function ResetPassword() {
         <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:px-16 lg:py-12">
           <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
             <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
-              Set New Password
+              Reset Your Password
             </h2>
-            <p className="mt-4 text-center text-white">
-              Please enter your new password below.
-            </p>
+            {email && (
+              <p className="mt-4 text-center text-white">
+                Create a new password for <span className="font-semibold">{email}</span>
+              </p>
+            )}
 
             <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
               <div className="col-span-6">
@@ -114,18 +134,17 @@ export default function ResetPassword() {
                   className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
                   disabled={loading}
                 >
-                  {loading ? "Updating..." : "Update Password"}
+                  {loading ? "Updating password..." : "Update Password"}
                 </Button>
               </div>
-              
+
               <div className="col-span-6 text-center">
-                <button
-                  type="button"
-                  onClick={() => router.push("/login")}
-                  className="text-sm text-white hover:underline"
-                >
-                  Back to Login
-                </button>
+                <p className="text-white">
+                  Remember your password?{" "}
+                  <a href="/login" className="text-indigo-400 hover:text-indigo-300">
+                    Sign in
+                  </a>
+                </p>
               </div>
             </form>
           </div>
