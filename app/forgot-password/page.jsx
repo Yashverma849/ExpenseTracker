@@ -6,12 +6,11 @@ import { supabase } from "../../lib/supabaseClient";
 import Header from "../_components/Header";
 import { Button } from "@/components/ui/button";
 
-export default function Login() {
+export default function ForgotPassword() {
   const router = useRouter();
 
   // state variables
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
@@ -23,22 +22,19 @@ export default function Login() {
     setError(null);
     setSuccess("");
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
 
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        setSuccess("Login successful! Redirecting...");
-        setTimeout(() => router.push("/dashboard"), 2000); // Redirect after 2 seconds
+      if (error) {
+        setError(error.message);
       } else {
-        setError("Failed to authenticate user.");
+        setSuccess("Password reset email sent! Please check your inbox.");
+        setTimeout(() => router.push("/login"), 3000);
       }
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
+      console.error(err);
+    } finally {
       setLoading(false);
     }
   };
@@ -57,8 +53,11 @@ export default function Login() {
         <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:px-16 lg:py-12">
           <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
             <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
-              Sign in to your account
+              Reset Your Password
             </h2>
+            <p className="mt-4 text-center text-white">
+              Enter your email address and we'll send you a link to reset your password.
+            </p>
 
             <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
               <div className="col-span-6">
@@ -77,31 +76,6 @@ export default function Login() {
                 />
               </div>
 
-              <div className="col-span-6">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="block text-sm font-medium text-white">
-                    Password
-                  </label>
-                  <button 
-                    type="button"
-                    onClick={() => router.push("/forgot-password")}
-                    className="text-sm font-semibold text-indigo-400 hover:text-indigo-300"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
               {error && <div className="col-span-6 text-red-500 text-sm text-center">{error}</div>}
               {success && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
 
@@ -112,8 +86,18 @@ export default function Login() {
                   className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
                   disabled={loading}
                 >
-                  {loading ? "Signing in..." : "Sign in"}
+                  {loading ? "Sending..." : "Send Reset Link"}
                 </Button>
+              </div>
+
+              <div className="col-span-6 text-center">
+                <button
+                  type="button"
+                  onClick={() => router.push("/login")}
+                  className="text-sm text-white hover:underline"
+                >
+                  Back to Login
+                </button>
               </div>
             </form>
           </div>
@@ -121,4 +105,4 @@ export default function Login() {
       </div>
     </section>
   );
-}
+} 
