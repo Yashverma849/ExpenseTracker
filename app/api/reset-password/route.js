@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Hardcode the service key as a fallback if environment variable is not available
-// This is not ideal for security, but necessary for your specific use case
-const SUPABASE_URL = 'https://ylpeqmpzkuupjntuweos.supabase.co';
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlscGVxbXB6a3V1cGpudHV3ZW9zIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MDA1NDAyOSwiZXhwIjoyMDU1NjMwMDI5fQ.5k4KwdqCWQBngxUY2QRehQFJJqWj4lMoobZ0H_Ever0';
-
 export async function POST(req) {
   try {
     console.log('Password reset request received');
@@ -20,12 +15,17 @@ export async function POST(req) {
       );
     }
 
-    // Get the Supabase URL and service key, with fallbacks to hardcoded values
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_SERVICE_KEY;
+    // Get the Supabase URL and service key from environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    console.log('Using Supabase URL:', supabaseUrl);
-    console.log('Using service key (first 10 chars):', supabaseServiceKey?.substring(0, 10) + '...');
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase environment variables');
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact the administrator.' },
+        { status: 500 }
+      );
+    }
 
     try {
       console.log('Creating Supabase admin client');
@@ -48,7 +48,7 @@ export async function POST(req) {
       if (listError) {
         console.error('Error listing users:', listError);
         return NextResponse.json({ 
-          error: 'Admin API error: ' + listError.message,
+          error: 'Admin API error. Please try again later.',
           status: 500 
         });
       }
@@ -77,7 +77,7 @@ export async function POST(req) {
       if (updateError) {
         console.error('Error updating password:', updateError);
         return NextResponse.json({ 
-          error: 'Failed to update password: ' + updateError.message,
+          error: 'Failed to update password. Please try again later.',
           status: 500 
         });
       }
@@ -92,14 +92,14 @@ export async function POST(req) {
     } catch (error) {
       console.error('Error in reset password operation:', error);
       return NextResponse.json({ 
-        error: 'Operation failed: ' + error.message,
+        error: 'Operation failed. Please try again later.',
         status: 500 
       });
     }
   } catch (error) {
     console.error('Global error in reset password:', error);
     return NextResponse.json({ 
-      error: 'An unexpected error occurred: ' + error.message,
+      error: 'An unexpected error occurred. Please try again later.',
       status: 500 
     });
   }
