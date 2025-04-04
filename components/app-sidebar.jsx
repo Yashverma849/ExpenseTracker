@@ -54,7 +54,7 @@ export function AppSidebar({
   return (
     <Sidebar
       collapsible="icon"
-      className="relative bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg border border-white/20 text-white" // Add text-white class here
+      className="relative bg-gray-900 bg-opacity-90 backdrop-filter backdrop-blur-lg shadow-lg border border-white/20 text-white" // Add bg-gray-900 as fallback
       {...props}
     >
       <Image 
@@ -63,6 +63,11 @@ export function AppSidebar({
         layout="fill" 
         objectFit="cover" 
         className="absolute inset-0 z-0" 
+        priority
+        onError={(e) => {
+          console.error("Failed to load sidebar background image");
+          e.target.style.display = 'none';
+        }}
       />
       <div className="relative z-10 text-white flex flex-col justify-between h-full">
         <div>

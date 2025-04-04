@@ -18,22 +18,66 @@ function Header() {
   useEffect(() => {
     const getSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error fetching session:', error);
+          return;
+        }
+        
+        const session = data.session;
+        console.log("Session retrieved:", session ? "Session exists" : "No session");
+        
         if (session) {
-          const { data: { user } } = await supabase.auth.getUser();
-          setUser(user);
+          console.log("Session user:", session.user?.id);
+          console.log("Session user metadata:", session.user?.user_metadata);
+        }
+        
+        setSession(session);
+        
+        if (session) {
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          
+          if (userError) {
+            console.error('Error fetching user:', userError);
+            return;
+          }
+          
+          if (userData.user) {
+            console.log("User data retrieved successfully");
+            console.log("User metadata from getUser:", userData.user.user_metadata);
+            console.log("User ID:", userData.user.id);
+            console.log("User email:", userData.user.email);
+            
+            // If metadata is missing, try to retrieve it from the session
+            if (!userData.user.user_metadata && session.user?.user_metadata) {
+              console.log("Metadata missing in getUser response but present in session");
+              userData.user.user_metadata = session.user.user_metadata;
+            }
+            
+            setUser(userData.user);
+          } else {
+            console.error("getUser returned no user data");
+          }
         }
       } catch (error) {
-        console.error('Error fetching session:', error);
+        console.error('Error in session logic:', error);
       }
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event);
       setSession(session);
+      
       if (session) {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
+        const { data, error } = await supabase.auth.getUser();
+        
+        if (error) {
+          console.error('Error fetching user on auth change:', error);
+          return;
+        }
+        
+        console.log("User data after auth change:", data.user?.id);
+        setUser(data.user);
       } else {
         setUser(null);
       }
@@ -87,26 +131,57 @@ function Header() {
   };
 
   // User avatar component
-  const UserAvatar = () => (
-    <div 
-      className="relative cursor-pointer"
-      onClick={() => setShowDropdown(!showDropdown)}
-    >
-      {user?.user_metadata?.avatar_url ? (
-        <Image
-          src={user.user_metadata.avatar_url}
-          alt="User avatar"
-          width={40}
-          height={40}
-          className="rounded-full border-2 border-gray-200"
-        />
-      ) : (
-        <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-medium">
-          {user?.email?.[0]?.toUpperCase() || 'U'}
+  const UserAvatar = () => {
+    const [imageError, setImageError] = useState(false);
+    
+    // Check if user exists
+    if (!user) {
+      console.log("UserAvatar: No user data available");
+      return (
+        <div className="w-10 h-10 rounded-full bg-gray-700 border-2 border-white/30 flex items-center justify-center text-white font-medium">
+          ?
         </div>
-      )}
-    </div>
-  );
+      );
+    }
+    
+    // Get initial from email or default
+    const userInitial = user.email ? user.email[0].toUpperCase() : 'U';
+    
+    // Check if we have a valid avatar URL
+    const avatarUrl = user.user_metadata && typeof user.user_metadata === 'object' 
+      ? user.user_metadata.avatar_url 
+      : null;
+    
+    // Log the metadata info directly
+    console.log("User initial:", userInitial);
+    console.log("Has metadata:", user.user_metadata ? "Yes" : "No");
+    console.log("Avatar URL:", avatarUrl);
+    
+    return (
+      <div 
+        className="relative cursor-pointer"
+        onClick={() => setShowDropdown(!showDropdown)}
+      >
+        {avatarUrl && !imageError ? (
+          <Image
+            src={avatarUrl}
+            alt="User avatar"
+            width={40}
+            height={40}
+            className="rounded-full border-2 border-white/30"
+            onError={() => {
+              console.error("Avatar image failed to load");
+              setImageError(true);
+            }}
+          />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-indigo-900 border-2 border-white/30 flex items-center justify-center text-white font-medium">
+            {userInitial}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div
@@ -129,18 +204,57 @@ function Header() {
               className="relative cursor-pointer"
               onClick={() => setShowDropdown(!showDropdown)}
             >
-              {user?.user_metadata?.first_name || 'User'}
+              <UserAvatar />
             </div>
             
             {showDropdown && (
-              <div className="absolute top-12 right-4 bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg shadow-lg border border-white/20 rounded-lg p-2 w-48">
-                <div className="p-2 text-sm text-gray-700">
-                  {user?.user_metadata?.first_name || 'User'}
+              <div className="absolute top-12 right-4 bg-black bg-opacity-50 backdrop-filter backdrop-blur-lg shadow-lg border border-white/20 rounded-lg p-2 w-56 z-50">
+                <div className="px-2 pt-2 pb-1 text-sm text-white font-medium">
+                  {/* User info with proper fallbacks */}
+                  {user ? (
+                    <>
+                      {/* Show name if available */}
+                      {user.user_metadata && (user.user_metadata.first_name || user.user_metadata.name) ? (
+                        <div className="font-semibold">
+                          {user.user_metadata.first_name || user.user_metadata.name}
+                        </div>
+                      ) : user.email ? (
+                        <div className="font-semibold truncate">
+                          {user.email.split('@')[0]}
+                        </div>
+                      ) : (
+                        <div className="font-semibold">User</div>
+                      )}
+                      
+                      {/* Show email with truncation */}
+                      {user.email && (
+                        <div className="truncate text-xs text-white/80 mt-1" title={user.email}>
+                          {user.email}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="font-semibold">Loading user data...</div>
+                  )}
                 </div>
-                <hr className="my-1" />
+                <hr className="my-1 border-white/20" />
+                <button
+                  onClick={() => {
+                    try {
+                      setShowDropdown(false); // Close dropdown first
+                      console.log("Navigating to dashboard");
+                      router.push('/dashboard');
+                    } catch (error) {
+                      console.error("Navigation error:", error);
+                    }
+                  }}
+                  className="w-full text-left p-2 text-sm hover:bg-white/10 rounded-md text-white"
+                >
+                  Dashboard
+                </button>
                 <button
                   onClick={handleLogout}
-                  className="w-full text-left p-2 text-sm hover:bg-gray-100 rounded-md text-red-600"
+                  className="w-full text-left p-2 text-sm hover:bg-white/10 rounded-md text-red-400"
                 >
                   Log Out
                 </button>

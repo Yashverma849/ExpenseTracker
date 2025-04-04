@@ -565,17 +565,17 @@ async function getTotalExpense({ category = null, day = null, month = null, year
     }
   } else {
     // Standard date-based filtering
-    if (category) query = query.eq("category", category);
-    if (day && month && year) {
-      const formattedDay = String(day).padStart(2, '0');
-      const formattedMonth = String(month).padStart(2, '0');
-      query = query.eq("date", `${year}-${formattedMonth}-${formattedDay}`);
-    } else if (month && year) {
-      const formattedMonth = String(month).padStart(2, '0');
-      query = query.gte("date", `${year}-${formattedMonth}-01`)
+  if (category) query = query.eq("category", category);
+  if (day && month && year) {
+    const formattedDay = String(day).padStart(2, '0');
+    const formattedMonth = String(month).padStart(2, '0');
+    query = query.eq("date", `${year}-${formattedMonth}-${formattedDay}`);
+  } else if (month && year) {
+    const formattedMonth = String(month).padStart(2, '0');
+    query = query.gte("date", `${year}-${formattedMonth}-01`)
                .lte("date", `${year}-${formattedMonth}-31`);
-    } else if (year) {
-      query = query.gte("date", `${year}-01-01`)
+  } else if (year) {
+    query = query.gte("date", `${year}-01-01`)
                .lte("date", `${year}-12-31`);
     }
   }
@@ -631,7 +631,7 @@ async function listExpenses({ start_date, end_date, category, period }, user_id)
   if (category) {
     logSystemFormat('observation', "category");
   }
-  
+
   let query = supabase.from("expenses").select("*").eq("user_id", user_id);
   
   // First check if a period is specified and convert it to date range
@@ -873,7 +873,7 @@ Your expense has been recorded in the database.`;
     // Process multi-line JSON with type fields for analysis steps
     let lines = responseText.split('\n').filter(line => line.trim());
     let finalResponseJSON = null;
-
+    
     // Find the final function response (should be the last valid JSON object)
     for (let i = lines.length - 1; i >= 0; i--) {
       try {
@@ -887,7 +887,7 @@ Your expense has been recorded in the database.`;
         // Continue searching
       }
     }
-
+    
     // If we couldn't find a valid function response, try to extract one using regex
     if (!finalResponseJSON) {
       console.log("No final function response found, attempting extraction");
@@ -905,7 +905,7 @@ Your expense has been recorded in the database.`;
         }
       }
     }
-
+    
     // Final fallback: Create a response based on the user query
     if (!finalResponseJSON) {
       logSystemFormat('process', "Creating fallback response based on query");
@@ -1033,12 +1033,12 @@ Your expense has been recorded in the database.`;
             function: "chat",
             output: createExpensePrompt()
           };
-        } 
+        }
         else {
-          finalResponseJSON = {
-            function: "chat",
-            output: "I couldn't understand your request. Please try rephrasing."
-          };
+        finalResponseJSON = {
+          function: "chat",
+          output: "I couldn't understand your request. Please try rephrasing."
+        };
         }
       }
     }

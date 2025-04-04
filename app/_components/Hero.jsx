@@ -33,10 +33,10 @@ function Hero() {
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
+        if (entry.isIntersecting && sectionRef.current) {
           sectionRef.current.classList.add("fade-in");
           sectionRef.current.classList.remove("fade-out");
-        } else {
+        } else if (sectionRef.current) {
           sectionRef.current.classList.add("fade-out");
           sectionRef.current.classList.remove("fade-in");
         }
@@ -100,6 +100,7 @@ function Hero() {
               type="submit"
               variant="attractive"
               className="px-3 py-2 text-lg font-lg rounded-md shadow-xs"
+              onClick={handleGetStarted}
             >
               Get Started
             </Button>

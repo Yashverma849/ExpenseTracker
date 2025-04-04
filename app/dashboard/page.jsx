@@ -80,13 +80,30 @@ export default function Page() {
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen text-white">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center h-screen text-white bg-gray-900">
+        <div className="p-6 bg-black bg-opacity-50 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg border border-white/20">
+          <div className="flex flex-col items-center">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4">Loading dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col justify-center items-center h-screen">
-        <p className="text-red-500">{error}</p>
+      <div className="flex flex-col justify-center items-center h-screen bg-gray-900">
+        <div className="p-6 bg-black bg-opacity-50 backdrop-filter backdrop-blur-lg shadow-lg rounded-lg border border-white/20">
+          <p className="text-red-500">{error}</p>
+          <button 
+            onClick={() => router.push('/')}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md"
+          >
+            Return to Home
+          </button>
+        </div>
       </div>
     );
   }
@@ -95,14 +112,19 @@ export default function Page() {
     <SidebarProvider>
       <AppSidebar className="bg-transparent backdrop-blur-lg border-r border-white/20" />
       <SidebarInset>
-        {/* Fixed background */}
-        <div className="relative flex justify-center w-full pb-16">
+        {/* Fixed background with fallback color */}
+        <div className="relative flex justify-center w-full pb-16 bg-gray-900">
           <Image
             src="/pexels-adrien-olichon-1257089-2387793.jpg"
-            alt="logo"
+            alt="Background"
             layout="fill"
             objectFit="cover"
             className="absolute inset-0 z-0"
+            priority
+            onError={(e) => {
+              console.error("Failed to load background image");
+              e.target.style.display = 'none';
+            }}
           />
           <div className="relative z-10 w-full">
             {/* Main Content */}
