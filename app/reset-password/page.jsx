@@ -21,6 +21,7 @@ function ResetPasswordForm() {
   const [session, setSession] = useState(null);
   const [resetCode, setResetCode] = useState("");
   const [codeVerified, setCodeVerified] = useState(false);
+  const [noResetCode, setNoResetCode] = useState(false);
 
   useEffect(() => {
     console.log("ResetPassword page mounted");
@@ -72,8 +73,10 @@ function ResetPasswordForm() {
       
       verifyCode();
     } else {
+      // No reset code in URL
       setValidatingCode(false);
-      setError("No reset code found in URL. Please request a password reset link.");
+      setNoResetCode(true);
+      console.log("No reset code in URL, showing request password reset option");
     }
     
     return () => {
@@ -139,6 +142,7 @@ function ResetPasswordForm() {
     }
   };
 
+  // Show loading spinner while verifying code
   if (validatingCode) {
     return (
       <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
@@ -150,6 +154,38 @@ function ResetPasswordForm() {
         </p>
         <div className="flex justify-center mt-6">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show request new password screen if no code is provided
+  if (noResetCode) {
+    return (
+      <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
+        <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
+          Password Reset Required
+        </h2>
+        <p className="mt-4 text-center text-white">
+          To reset your password, you need a valid password reset link. Please request a new password reset email.
+        </p>
+        <div className="flex justify-center mt-8">
+          <Button
+            onClick={() => router.push("/password-reset")}
+            variant="attractive"
+            className="px-6 py-3 text-base font-medium rounded-md shadow-sm"
+          >
+            Request Password Reset
+          </Button>
+        </div>
+        <div className="mt-6 text-center">
+          <Button
+            onClick={() => router.push("/login")}
+            variant="ghost"
+            className="text-indigo-400 hover:text-indigo-300"
+          >
+            Back to Login
+          </Button>
         </div>
       </div>
     );
