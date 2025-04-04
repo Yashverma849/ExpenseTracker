@@ -27,27 +27,30 @@ export default function Login() {
     if (isResetMode) {
       // Handle password reset request
       console.log(`Requesting password reset for email: ${email}`);
-      const redirectUrl = `${window.location.origin}/reset-password`;
-      console.log(`Redirect URL: ${redirectUrl}`);
       
       try {
-        // Ensure we're using the correct redirect URL with the properly encoded origin
-        const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: redirectUrl,
+        setLoading(true);
+        
+        // Use our server-side API instead of direct Supabase call
+        const response = await fetch('/api/reset-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
         });
         
-        console.log("Reset password response:", data ? "Data received" : "No data", error || "No error");
+        const result = await response.json();
         
-        if (error) {
-          console.error("Reset password error:", error);
-          setError(error.message);
-        } else {
-          console.log("Reset password email sent successfully");
-          setSuccess(
-            "Reset password link sent to your email. Please check your inbox and spam folders. " +
-            "The link will expire in 24 hours."
-          );
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to send reset email');
         }
+        
+        console.log("Reset password response:", result);
+        setSuccess(
+          "Reset password link sent to your email. Please check your inbox and spam folders. " +
+          "The link will expire in 24 hours."
+        );
       } catch (err) {
         console.error("Exception during reset password:", err);
         setError(`An unexpected error occurred: ${err.message}`);

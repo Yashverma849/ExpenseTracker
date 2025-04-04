@@ -17,18 +17,10 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState("");
   const [isReady, setIsReady] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [countdown, setCountdown] = useState(0);
   
   // Check for auth session on mount
   useEffect(() => {
-    // Add a timeout to ensure we don't get stuck in checking state
-    const sessionCheckTimeout = setTimeout(() => {
-      if (checkingSession) {
-        console.log("Session check timed out - forcing ready state");
-        setCheckingSession(false);
-        setIsReady(true);
-      }
-    }, 5000);
-    
     async function checkSession() {
       try {
         console.log("Checking for active session...");
@@ -46,48 +38,57 @@ export default function ResetPassword() {
           return;
         }
         
-        // If there's a session (signed in), just show the form
-        if (data.session) {
-          console.log("Valid session found, user can reset password");
-          setIsReady(true);
-          setCheckingSession(false);
-          return;
-        }
-        
-        // No session - check for auth parameters in URL
-        console.log("No active session found. Checking for auth parameters in URL...");
-        
-        // Look for auth callback in URL - Supabase often uses URL fragments/hash
-        const hasAuthParams = window.location.hash.includes('access_token') || 
-                           window.location.hash.includes('error_description');
-        
-        if (hasAuthParams) {
-          console.log("Auth parameters found in URL, handling auth state change...");
-          try {
+        // If no session, check if there's an access token in the URL
+        // Supabase might still be processing the auth link
+        if (!data.session) {
+          console.log("No active session found. Checking for auth parameters in URL...");
+          
+          // Look for auth callback in URL - Supabase often uses URL fragments/hash
+          const hasAuthParams = window.location.hash.includes('access_token') || 
+                               window.location.hash.includes('error_description');
+          
+          if (hasAuthParams) {
+            console.log("Auth parameters found in URL, handling auth state change...");
             // Process the URL parameters - this will establish the session
             await supabase.auth.getSession();
             
-            console.log("Session established successfully");
-            setIsReady(true);
-            setSuccess("Password reset session verified successfully. You can now set a new password.");
-            setCheckingSession(false);
-          } catch (urlProcessError) {
-            console.error("Error processing URL parameters:", urlProcessError);
-            setError("Error processing your password reset link. Please request a new one.");
-            setCheckingSession(false);
+            // Wait a moment and check again for the session
+            setTimeout(async () => {
+              const { data: refreshData, error: refreshError } = await supabase.auth.getSession();
+              
+              if (refreshError || !refreshData.session) {
+                console.error("Failed to establish session:", refreshError);
+                setError("Invalid or expired password reset link. Please request a new one.");
+                setCheckingSession(false);
+                return;
+              }
+              
+              console.log("Session established successfully");
+              setIsReady(true);
+              setSuccess("Password reset session verified successfully. You can now set a new password.");
+              setCheckingSession(false);
+            }, 1000);
+            
+            return;
           }
+          
+          // No session and no auth params in URL - invalid reset attempt
+          console.log("No session or auth parameters");
+          setError("Invalid password reset link. Please request a new one.");
+          setCheckingSession(false);
+          
+          // Redirect after a delay
+          setTimeout(() => {
+            router.push('/login');
+          }, 3000);
+          
           return;
         }
         
-        // No session and no auth params in URL - invalid reset attempt
-        console.log("No session or auth parameters");
-        setError("Invalid password reset link. Please request a new one.");
+        // Session exists - user can reset password
+        console.log("Valid session found, user can reset password");
+        setIsReady(true);
         setCheckingSession(false);
-        
-        // Redirect after a delay
-        setTimeout(() => {
-          router.push('/login');
-        }, 3000);
         
       } catch (e) {
         console.error("Error in session check:", e);
@@ -97,25 +98,7 @@ export default function ResetPassword() {
     }
     
     checkSession();
-    
-    // Clean up the timeout on component unmount
-    return () => clearTimeout(sessionCheckTimeout);
-  }, [router, checkingSession]);
-  
-  // Add meta refresh tag when password is updated successfully
-  useEffect(() => {
-    if (success) {
-      // Create a meta refresh tag as a backup redirection method
-      const meta = document.createElement('meta');
-      meta.httpEquiv = 'refresh';
-      meta.content = '2;url=/dashboard';
-      document.head.appendChild(meta);
-      
-      return () => {
-        document.head.removeChild(meta);
-      };
-    }
-  }, [success]);
+  }, [router]);
   
   // Handle password update
   const handleSubmit = async (e) => {
@@ -123,15 +106,26 @@ export default function ResetPassword() {
     
     setError("");
     setSuccess("");
+    setCountdown(0);
+    
+    // Set up a failsafe redirect in case the main one fails
+    let redirectTimer = null;
+    const failsafeRedirect = () => {
+      console.log("Executing failsafe redirect");
+      window.location.href = '/dashboard';
+    };
+    redirectTimer = setTimeout(failsafeRedirect, 5000);
     
     // Validate passwords
     if (password !== confirmPassword) {
       setError("Passwords do not match");
+      clearTimeout(redirectTimer);
       return;
     }
     
     if (password.length < 6) {
       setError("Password must be at least 6 characters");
+      clearTimeout(redirectTimer);
       return;
     }
     
@@ -147,22 +141,52 @@ export default function ResetPassword() {
       
       if (error) {
         console.error("Password update error:", error);
+        clearTimeout(redirectTimer);
         throw error;
       }
       
       console.log("Password updated successfully");
       setSuccess("Password updated successfully! Redirecting to dashboard...");
       
-      // Set a brief delay to show the success message, then redirect
+      // Start countdown from 3
+      setCountdown(3);
+      const countdownInterval = setInterval(() => {
+        setCountdown(prev => {
+          const next = prev - 1;
+          if (next <= 0) {
+            clearInterval(countdownInterval);
+          }
+          return next;
+        });
+      }, 1000);
+      
+      // Force redirect to dashboard after a short delay
+      console.log("Starting redirection process to dashboard");
+      
+      // Use a simpler, more reliable redirect approach
       setTimeout(() => {
+        console.log("Executing redirect to dashboard");
+        // Direct navigation is more reliable than router.push in some cases
         window.location.href = '/dashboard';
       }, 1500);
       
     } catch (error) {
       console.error("Error in password update:", error);
       setError(error.message || "Failed to update password. Please try again.");
+      clearTimeout(redirectTimer);
+      setCountdown(0);
     } finally {
       setLoading(false);
+
+      // Ensure window.location.href is called even in error cases
+      if (success) {
+        setTimeout(() => {
+          if (window.location.pathname === '/reset-password') {
+            console.log("Forcing navigation after timeout");
+            window.location.href = '/dashboard';
+          }
+        }, 3000);
+      }
     }
   };
   
@@ -206,7 +230,7 @@ export default function ResetPassword() {
       <div className="flex flex-grow items-center justify-center">
         <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:px-16 lg:py-12">
           <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
-            {error && !isReady ? (
+            {!isReady ? (
               // Error state - invalid session
               <div className="text-center py-8">
                 <h2 className="text-2xl font-bold text-white sm:text-3xl">Password Reset Error</h2>
@@ -214,7 +238,7 @@ export default function ResetPassword() {
                 <p className="mt-2 text-white text-sm">Redirecting to login page...</p>
               </div>
             ) : (
-              // Valid session or forced ready state - show password reset form
+              // Valid session - show password reset form
               <>
                 <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
                   Reset your password
@@ -261,7 +285,7 @@ export default function ResetPassword() {
                       <div className="flex justify-center items-center">
                         <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2"></div>
                         <span className="text-xs text-white">
-                          Redirecting to dashboard...
+                          Redirecting to dashboard{countdown > 0 ? ` in ${countdown}...` : '...'}
                         </span>
                       </div>
                     </div>
