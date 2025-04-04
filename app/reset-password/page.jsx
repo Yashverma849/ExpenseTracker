@@ -60,20 +60,29 @@ function ResetPasswordContent() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to reset password');
+        // If we get a non-2xx response, treat it as an error
+        console.error("API Error:", data);
+        throw new Error(data.error || `Failed to reset password (${response.status})`);
       }
 
-      // Show success message
-      setSuccess(data.message || "Password reset initiated successfully.");
-      
-      if (data.email_verification_required) {
-        setEmailVerificationRequired(true);
+      // Check if the API reported success
+      if (data.success) {
+        // Show success message
+        setSuccess(data.message || "Password reset initiated successfully.");
+        
+        if (data.email_verification_required) {
+          setEmailVerificationRequired(true);
+        } else {
+          setPasswordResetComplete(true);
+          // Redirect to login after 3 seconds
+          setTimeout(() => router.push("/login"), 3000);
+        }
       } else {
-        setPasswordResetComplete(true);
-        // Redirect to login after 3 seconds
-        setTimeout(() => router.push("/login"), 3000);
+        // The API returned a 2xx status but indicated failure in the response body
+        throw new Error(data.error || "Password reset failed");
       }
     } catch (err) {
+      console.error("Password reset error:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -135,8 +144,17 @@ function ResetPasswordContent() {
                     />
                   </div>
 
-                  {error && <div className="col-span-6 text-red-500 text-sm text-center">{error}</div>}
-                  {success && !passwordResetComplete && !emailVerificationRequired && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
+                  {error && (
+                    <div className="col-span-6 text-red-500 text-sm p-2 bg-red-100 bg-opacity-20 rounded text-center">
+                      {error}
+                    </div>
+                  )}
+                  
+                  {success && !passwordResetComplete && !emailVerificationRequired && (
+                    <div className="col-span-6 text-green-500 text-sm p-2 bg-green-100 bg-opacity-20 rounded text-center">
+                      {success}
+                    </div>
+                  )}
 
                   <div className="col-span-6">
                     <Button
