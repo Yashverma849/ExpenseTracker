@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// Create a regular supabase client using the public anon key
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 export async function POST(req) {
   try {
     console.log('Password reset request received');
@@ -15,78 +20,32 @@ export async function POST(req) {
       );
     }
 
-    // Get the Supabase URL and service key from environment variables
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase environment variables');
-      return NextResponse.json(
-        { error: 'Server configuration error. Please contact the administrator.' },
-        { status: 500 }
-      );
-    }
-
+    // Approach: Send a password reset email to the user
+    // This is the most reliable and secure approach for password reset
+    // The email contains a secure token that only the real user would have access to
     try {
-      console.log('Creating Supabase admin client');
-      // Create admin client with service role key
-      const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
+      console.log('Sending password reset email to:', email);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://finzarc-expensetracker.vercel.app'}/login`,
       });
       
-      // Test if we can access admin functions
-      console.log('Testing admin API access');
-      
-      // Get user by email first
-      console.log('Attempting to fetch user data for email:', email);
-      
-      const { data: { users }, error: listError } = await adminClient.auth.admin.listUsers();
-      
-      if (listError) {
-        console.error('Error listing users:', listError);
+      if (error) {
+        console.error('Error sending reset email:', error);
         return NextResponse.json({ 
-          error: 'Admin API error. Please try again later.',
+          error: 'Unable to process your request. Please try again later.',
           status: 500 
         });
       }
       
-      console.log('Successfully retrieved users list, count:', users?.length || 0);
+      console.log('Password reset email sent successfully');
       
-      // Find the user with the matching email
-      const user = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
-      
-      if (!user) {
-        console.log('User not found with email:', email);
-        return NextResponse.json({ 
-          error: 'User not found with the provided email',
-          status: 404 
-        });
-      }
-      
-      console.log('Found user. Attempting to update password for user ID:', user.id);
-      
-      // Update the user's password
-      const { error: updateError } = await adminClient.auth.admin.updateUserById(
-        user.id,
-        { password: password }
-      );
-      
-      if (updateError) {
-        console.error('Error updating password:', updateError);
-        return NextResponse.json({ 
-          error: 'Failed to update password. Please try again later.',
-          status: 500 
-        });
-      }
-      
-      console.log('Password updated successfully for user:', user.id);
-      
+      // We don't actually update the password here, but we pretend we did to keep the UI flow consistent
+      // The actual password update will happen when the user clicks the link in the email
       return NextResponse.json({
         success: true,
-        message: 'Password updated successfully. You can now log in with your new password.'
+        message: 'Password reset email sent. Please check your inbox to complete the reset process.',
+        email_sent: true
       });
       
     } catch (error) {
