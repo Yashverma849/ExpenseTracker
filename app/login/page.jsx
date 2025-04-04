@@ -31,7 +31,7 @@ export default function Login() {
       
       try {
         const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_VERCEL_URL || `${window.location.origin}/reset-password`,
         });
         
         console.log("Reset password response:", data ? "Data received" : "No data", error || "No error");

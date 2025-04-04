@@ -184,9 +184,10 @@ export default function ResetPassword() {
       
       // Simplify redirection - use direct window.location after a delay
       console.log("Setting up redirect to dashboard");
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_VERCEL_URL || window.location.origin;
       setTimeout(() => {
         console.log("Executing redirect now");
-        window.location.href = "/dashboard";
+        window.location.href = `${siteUrl}/dashboard`;
       }, 1500);
       
     } catch (error) {
