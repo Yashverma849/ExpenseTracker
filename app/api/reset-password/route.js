@@ -77,21 +77,85 @@ export async function POST(req) {
       const userId = userData.users[0].id;
       console.log('User found, updating password for user ID:', userId);
       
-      // Update the user's password directly using admin API
-      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-        userId,
-        { password: password }
-      );
+      // Check if email is confirmed and update if needed
+      const userRecord = userData.users[0];
+      const needsEmailConfirmation = !userRecord.email_confirmed_at;
       
-      if (updateError) {
-        console.error('Error updating password:', updateError);
+      if (needsEmailConfirmation) {
+        console.log('User email not confirmed, updating confirmation status for user ID:', userId);
+        
+        // Update the user to confirm their email and update password
+        const { error: updateStatusError } = await supabaseAdmin.auth.admin.updateUserById(
+          userId,
+          { 
+            email_confirm: true,
+            confirmation_sent_at: null,
+            password: password
+          }
+        );
+        
+        if (updateStatusError) {
+          console.error('Error updating user status:', updateStatusError);
+          return NextResponse.json({
+            error: 'Failed to confirm user email: ' + updateStatusError.message,
+            status: 500
+          });
+        }
+        
+        console.log('User email confirmed and password updated');
+      } else {
+        // Just update the password
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+          userId,
+          { 
+            password: password,
+            confirmation_sent_at: null
+          }
+        );
+        
+        if (updateError) {
+          console.error('Error updating password:', updateError);
+          return NextResponse.json({
+            error: 'Failed to update password: ' + updateError.message,
+            status: 500
+          });
+        }
+        
+        console.log('Password updated successfully for user ID:', userId);
+      }
+      
+      // Now verify that the password was actually updated by attempting to sign in
+      console.log('Verifying password change by attempting to sign in');
+      
+      // Create a new Supabase client for verification to avoid session conflicts
+      const verifyClient = createClient(supabaseUrl, supabaseAnonKey);
+      
+      const { data: signInData, error: signInError } = await verifyClient.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (signInError) {
+        console.error('Failed to verify password change:', signInError);
         return NextResponse.json({
-          error: 'Failed to update password: ' + updateError.message,
+          error: 'Password was updated but could not be verified: ' + signInError.message,
+          details: JSON.stringify(signInError),
           status: 500
         });
       }
       
-      console.log('Password updated successfully for user ID:', userId);
+      if (!signInData?.session) {
+        console.error('No session returned after sign-in verification');
+        return NextResponse.json({
+          error: 'Password was updated but sign-in verification failed',
+          status: 500
+        });
+      }
+      
+      // Sign out the verification client to clean up
+      await verifyClient.auth.signOut();
+      
+      console.log('Password change verified successfully');
       
       // Return success response
       return NextResponse.json({
