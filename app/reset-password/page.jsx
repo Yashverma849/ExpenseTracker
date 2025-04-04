@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import Header from "../_components/Header";
 import { Button } from "@/components/ui/button";
 
 export default function ResetPassword() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // state variables
   const [password, setPassword] = useState("");
@@ -16,46 +17,17 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [session, setSession] = useState(null);
-  const [hashParams, setHashParams] = useState({});
-  const [type, setType] = useState("");
+  const [resetCode, setResetCode] = useState("");
 
   useEffect(() => {
     console.log("ResetPassword page mounted");
     
-    // Function to parse hash parameters
-    const parseHashParams = (hash) => {
-      if (!hash || hash === "") return {};
-      
-      // Remove the leading # character
-      const hashStr = hash.substring(1);
-      // Parse the hash string to get parameters
-      const params = {};
-      const searchParams = new URLSearchParams(hashStr);
-      
-      for (const [key, value] of searchParams.entries()) {
-        params[key] = value;
-      }
-      
-      return params;
-    };
+    // Get the code from URL query parameters (Next.js way)
+    const code = searchParams.get('code');
+    console.log("Reset code from URL:", code);
     
-    // Get and parse hash parameters from URL
-    if (typeof window !== "undefined") {
-      console.log("Current URL:", window.location.href);
-      const hashStr = window.location.hash;
-      console.log("URL hash:", hashStr);
-      
-      if (hashStr) {
-        // Parse hash parameters
-        const params = parseHashParams(hashStr);
-        console.log("Parsed hash parameters:", params);
-        setHashParams(params);
-        
-        // Check if type parameter exists (Supabase uses 'type=recovery')
-        if (params.type) {
-          setType(params.type);
-        }
-      }
+    if (code) {
+      setResetCode(code);
     }
 
     // Check session status
@@ -70,6 +42,30 @@ export default function ResetPassword() {
           setSession(data.session);
         } else {
           console.log("No active session found");
+          
+          // If we have a reset code, we can verify it
+          if (code) {
+            try {
+              // Use the verification code to get a session
+              console.log("Verifying reset code...");
+              const { data, error } = await supabase.auth.verifyOtp({
+                type: 'recovery',
+                token: code,
+              });
+              
+              console.log("Reset code verification result:", { data, error });
+              
+              if (error) {
+                console.error("Code verification error:", error);
+                setError("Invalid or expired reset code. Please request a new password reset link.");
+              } else if (data?.session) {
+                console.log("Session established from reset code");
+                setSession(data.session);
+              }
+            } catch (err) {
+              console.error("Error verifying reset code:", err);
+            }
+          }
         }
       } catch (err) {
         console.error("Error checking session:", err);
@@ -77,7 +73,7 @@ export default function ResetPassword() {
     };
 
     checkSession();
-  }, []);
+  }, [searchParams]);
 
   // handle form submission
   const handleSubmit = async (e) => {
@@ -99,29 +95,12 @@ export default function ResetPassword() {
 
     try {
       console.log("Attempting to update password");
-      let result;
-
-      // If there's a recovery token in the URL, try to use it directly
-      if (hashParams.access_token && type === "recovery") {
-        // Set up a temporary auth session using the token
-        console.log("Setting up auth with recovery token");
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: hashParams.access_token,
-          refresh_token: hashParams.refresh_token || "",
-        });
-
-        if (sessionError) {
-          console.error("Error setting session:", sessionError);
-        }
-      }
-
+      
       // Now attempt to update the password
       console.log("Updating password...");
-      result = await supabase.auth.updateUser({ password });
+      const { data, error } = await supabase.auth.updateUser({ password });
       
-      console.log("Update result:", result);
-      
-      const { error } = result;
+      console.log("Update result:", { data, error });
       
       if (error) {
         console.error("Password update error:", error);
@@ -135,7 +114,7 @@ export default function ResetPassword() {
       } else {
         setSuccess("Password updated successfully! Redirecting to login...");
         
-        // Clear any hash/token from URL before redirecting
+        // Clear query parameters from URL before redirecting
         if (typeof window !== "undefined") {
           window.history.replaceState(null, document.title, window.location.pathname);
         }
@@ -173,7 +152,7 @@ export default function ResetPassword() {
             {error && (
               <div className="mt-4 text-red-500 text-center">
                 {error}
-                {error.includes("Authentication") && (
+                {error.includes("Authentication") || error.includes("expired") ? (
                   <div className="mt-2">
                     <Button
                       onClick={() => router.push("/password-reset")}
@@ -183,7 +162,7 @@ export default function ResetPassword() {
                       Request New Reset Link
                     </Button>
                   </div>
-                )}
+                ) : null}
               </div>
             )}
 

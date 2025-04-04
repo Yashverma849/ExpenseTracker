@@ -41,6 +41,7 @@ export default function PasswordReset() {
       console.log("Sending password reset email to:", email);
       console.log("Redirect URL:", `${siteUrl}/reset-password`);
       
+      // Using the OTP method which sends a reset code as a query parameter
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${siteUrl}/reset-password`,
       });
