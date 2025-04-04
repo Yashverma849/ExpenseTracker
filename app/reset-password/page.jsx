@@ -100,6 +100,21 @@ export default function ResetPassword() {
     checkSession();
   }, [router]);
   
+  // Add meta refresh tag when password is updated successfully
+  useEffect(() => {
+    if (success) {
+      // Create a meta refresh tag as a backup redirection method
+      const meta = document.createElement('meta');
+      meta.httpEquiv = 'refresh';
+      meta.content = '2;url=/dashboard';
+      document.head.appendChild(meta);
+      
+      return () => {
+        document.head.removeChild(meta);
+      };
+    }
+  }, [success]);
+  
   // Handle password update
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -148,27 +163,31 @@ export default function ResetPassword() {
       console.log("Password updated successfully");
       setSuccess("Password updated successfully! Redirecting to dashboard...");
       
-      // Start countdown from 3
-      setCountdown(3);
-      const countdownInterval = setInterval(() => {
-        setCountdown(prev => {
-          const next = prev - 1;
-          if (next <= 0) {
-            clearInterval(countdownInterval);
-          }
-          return next;
-        });
-      }, 1000);
+      // Force immediate redirect to dashboard
+      console.log("Executing immediate redirect to dashboard");
       
-      // Force redirect to dashboard after a short delay
-      console.log("Starting redirection process to dashboard");
-      
-      // Use a simpler, more reliable redirect approach
-      setTimeout(() => {
-        console.log("Executing redirect to dashboard");
-        // Direct navigation is more reliable than router.push in some cases
+      // Try multiple redirection approaches to ensure one works
+      try {
+        // Method 1: Direct location change (most reliable)
         window.location.href = '/dashboard';
-      }, 1500);
+        
+        // The methods below are fallbacks and likely won't execute
+        // due to the page navigating away, but included just in case
+      } catch (e) {
+        console.error("Error during redirect:", e);
+        
+        // Method 2: Try timeout approach
+        setTimeout(() => {
+          console.log("Redirect method 2");
+          window.location.replace('/dashboard');
+        }, 100);
+        
+        // Method 3: Another fallback
+        setTimeout(() => {
+          console.log("Redirect method 3");
+          document.location.href = '/dashboard';
+        }, 200);
+      }
       
     } catch (error) {
       console.error("Error in password update:", error);
@@ -178,15 +197,13 @@ export default function ResetPassword() {
     } finally {
       setLoading(false);
 
-      // Ensure window.location.href is called even in error cases
-      if (success) {
-        setTimeout(() => {
-          if (window.location.pathname === '/reset-password') {
-            console.log("Forcing navigation after timeout");
-            window.location.href = '/dashboard';
-          }
-        }, 3000);
-      }
+      // Final failsafe - if we're still on this page, force navigate
+      setTimeout(() => {
+        if (window.location.pathname === '/reset-password') {
+          console.log("Final forced redirection");
+          window.location.replace('/dashboard');
+        }
+      }, 1000);
     }
   };
   
