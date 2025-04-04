@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../_components/Header";
 import { Button } from "@/components/ui/button";
 
-export default function ResetPassword() {
+// Wrapper component for reset password
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
@@ -151,5 +152,26 @@ export default function ResetPassword() {
         </main>
       </div>
     </section>
+  );
+}
+
+// Loading component for suspense fallback
+function ResetPasswordLoading() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900">
+      <div className="text-center">
+        <h2 className="text-xl font-semibold text-white mb-4">Loading reset password page...</h2>
+        <div className="w-12 h-12 border-4 border-t-indigo-500 border-r-transparent border-b-indigo-500 border-l-transparent rounded-full animate-spin mx-auto"></div>
+      </div>
+    </div>
+  );
+}
+
+// Main component with suspense boundary
+export default function ResetPassword() {
+  return (
+    <Suspense fallback={<ResetPasswordLoading />}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 } 

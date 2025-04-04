@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../_components/Header";
 import { Button } from "@/components/ui/button";
 
-export default function ForgotPassword() {
+// Main content component
+function ForgotPasswordContent() {
   const router = useRouter();
 
   // state variables
@@ -100,5 +101,26 @@ export default function ForgotPassword() {
         </main>
       </div>
     </section>
+  );
+}
+
+// Loading component
+function ForgotPasswordLoading() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900">
+      <div className="text-center">
+        <h2 className="text-xl font-semibold text-white mb-4">Loading forgot password page...</h2>
+        <div className="w-12 h-12 border-4 border-t-indigo-500 border-r-transparent border-b-indigo-500 border-l-transparent rounded-full animate-spin mx-auto"></div>
+      </div>
+    </div>
+  );
+}
+
+// Main component with suspense boundary
+export default function ForgotPassword() {
+  return (
+    <Suspense fallback={<ForgotPasswordLoading />}>
+      <ForgotPasswordContent />
+    </Suspense>
   );
 } 
