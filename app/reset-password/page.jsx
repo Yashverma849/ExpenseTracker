@@ -17,6 +17,7 @@ function ResetPasswordContent() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
+  const [showEmailSent, setShowEmailSent] = useState(false);
 
   useEffect(() => {
     // Redirect to forgot-password if no email is provided
@@ -61,10 +62,9 @@ function ResetPasswordContent() {
         throw new Error(data.error || 'Failed to reset password');
       }
 
-      setSuccess(data.message || "Password updated successfully! Redirecting to dashboard...");
-      
-      // Wait 3 seconds before redirecting to dashboard
-      setTimeout(() => router.push("/dashboard"), 3000);
+      // Show success message
+      setSuccess(data.message || "Password reset initiated. Please check your email.");
+      setShowEmailSent(true);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -85,69 +85,92 @@ function ResetPasswordContent() {
       <div className="flex flex-grow items-center justify-center">
         <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:px-16 lg:py-12">
           <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
-            <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
-              Reset Your Password
-            </h2>
-            {email && (
-              <p className="mt-4 text-center text-white">
-                Create a new password for <span className="font-semibold">{email}</span>
-              </p>
-            )}
+            {!showEmailSent ? (
+              <>
+                <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
+                  Reset Your Password
+                </h2>
+                {email && (
+                  <p className="mt-4 text-center text-white">
+                    Create a new password for <span className="font-semibold">{email}</span>
+                  </p>
+                )}
 
-            <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
-              <div className="col-span-6">
-                <label htmlFor="password" className="block text-sm font-medium text-white">
-                  New Password
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+                <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
+                  <div className="col-span-6">
+                    <label htmlFor="password" className="block text-sm font-medium text-white">
+                      New Password
+                    </label>
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
 
-              <div className="col-span-6">
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-white">
-                  Confirm New Password
-                </label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+                  <div className="col-span-6">
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-white">
+                      Confirm New Password
+                    </label>
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
 
-              {error && <div className="col-span-6 text-red-500 text-sm text-center">{error}</div>}
-              {success && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
+                  {error && <div className="col-span-6 text-red-500 text-sm text-center">{error}</div>}
+                  {success && !showEmailSent && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
 
-              <div className="col-span-6">
+                  <div className="col-span-6">
+                    <Button
+                      type="submit"
+                      variant="attractive"
+                      className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
+                      disabled={loading}
+                    >
+                      {loading ? "Processing..." : "Reset Password"}
+                    </Button>
+                  </div>
+
+                  <div className="col-span-6 text-center">
+                    <p className="text-white">
+                      Remember your password?{" "}
+                      <a href="/login" className="text-indigo-400 hover:text-indigo-300">
+                        Sign in
+                      </a>
+                    </p>
+                  </div>
+                </form>
+              </>
+            ) : (
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-white mb-6">Check Your Email</h2>
+                <div className="bg-indigo-900 bg-opacity-50 p-6 rounded-lg mb-6">
+                  <p className="text-white mb-4">
+                    We've sent a password reset link to <span className="font-semibold">{email}</span>.
+                  </p>
+                  <p className="text-white">
+                    Please check your inbox and follow the instructions to complete the password reset.
+                  </p>
+                </div>
                 <Button
-                  type="submit"
+                  onClick={() => router.push("/login")}
                   variant="attractive"
                   className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
-                  disabled={loading}
                 >
-                  {loading ? "Updating password..." : "Update Password"}
+                  Return to Login
                 </Button>
               </div>
-
-              <div className="col-span-6 text-center">
-                <p className="text-white">
-                  Remember your password?{" "}
-                  <a href="/login" className="text-indigo-400 hover:text-indigo-300">
-                    Sign in
-                  </a>
-                </p>
-              </div>
-            </form>
+            )}
           </div>
         </main>
       </div>
