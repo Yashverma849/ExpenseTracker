@@ -5,8 +5,20 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Use standard client - no email methods
+// Get the service role key from environment variables
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Create both clients
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Admin client with service role key for admin operations
+const supabaseAdmin = supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  : null;
 
 export async function POST(req) {
   try {
@@ -22,114 +34,70 @@ export async function POST(req) {
       );
     }
 
+    // Check if we have admin access
+    if (!supabaseAdmin) {
+      console.error('Admin access not available - service role key missing');
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact administrator.' },
+        { status: 500 }
+      );
+    }
+
     try {
-      // First, check if the user exists by trying to sign in
+      // First, check if the user exists by looking them up with admin client
       console.log('Checking if user exists with email:', email);
       
-      // Try to sign in with dummy password
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password: 'dummy-password-that-should-fail',
-      });
-      
-      // Log the specific error for debugging
-      if (signInError) {
-        console.log('Sign-in error type:', signInError.message);
-      }
-      
-      // Check user existence based on error message
-      // If the error isn't about invalid credentials or unconfirmed email,
-      // then the user likely doesn't exist
-      if (signInError && 
-          !signInError.message.includes('Invalid login credentials') && 
-          !signInError.message.includes('Email not confirmed')) {
-        console.error('User likely does not exist:', signInError.message);
-        return NextResponse.json({ 
-          error: 'No account found with this email address', 
-          status: 404 
-        });
-      }
-      
-      console.log('User exists, proceeding with direct password update');
-      
-      // Try to update user password
-      // Rather than using resetPasswordForEmail, we're going to try using signUp
-      // which can sometimes update a password when email confirmation is disabled
-      
-      // 1. First, try to sign up with the same email but new password
-      console.log('Attempting to update password via signUp method');
-      
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          // Don't use email redirect flow - this is just for consistency
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://finzarc-expensetracker.vercel.app'}/login`,
-        },
-      });
-      
-      if (signUpError) {
-        // If we get "User already registered", it means we can't use this method
-        if (signUpError.message.includes('already registered')) {
-          console.log('SignUp method failed due to existing user');
-          return NextResponse.json({
-            error: 'Unable to reset password directly. Please contact support for assistance.',
-            status: 400
-          });
+      // Use admin auth to get user
+      const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1,
+        filter: {
+          email: email
         }
-        
-        console.error('Error in signUp attempt:', signUpError.message);
+      });
+      
+      if (userError) {
+        console.error('Error looking up user:', userError);
         return NextResponse.json({
-          error: 'Password reset failed: ' + signUpError.message,
+          error: 'Failed to lookup user: ' + userError.message,
           status: 500
         });
       }
       
-      // If we reach here, let's try a different approach
-      // 2. Try to sign in with the new credentials to see if it worked
-      console.log('Attempting to verify new credentials');
-      
-      const { data: signInData, error: verifyError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (verifyError) {
-        if (verifyError.message.includes('Email not confirmed')) {
-          // This means the password update might have worked but email verification is required
-          console.log('Email confirmation required after password update');
-          return NextResponse.json({
-            success: false,
-            error: 'Email verification required to complete the process',
-            status: 400
-          });
-        }
-        
-        console.error('Verification error:', verifyError.message);
+      // Check if user exists in the results
+      if (!userData?.users || userData.users.length === 0) {
+        console.error('No user found with email:', email);
         return NextResponse.json({
-          error: 'Failed to verify password update: ' + verifyError.message,
-          status: 400
+          error: 'No account found with this email address',
+          status: 404
         });
       }
       
-      // If we got here and have a session, the password was updated successfully
-      if (signInData?.session) {
-        // Sign out to force user to log in with new credentials
-        await supabase.auth.signOut();
-        
-        console.log('Password reset successful and verified');
+      // User exists, get their ID
+      const userId = userData.users[0].id;
+      console.log('User found, updating password for user ID:', userId);
+      
+      // Update the user's password directly using admin API
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        { password: password }
+      );
+      
+      if (updateError) {
+        console.error('Error updating password:', updateError);
         return NextResponse.json({
-          success: true,
-          message: 'Password has been updated successfully. You can now log in with your new password.'
-        });
-      } else {
-        // Unexpected response - we should have either an error or a session
-        console.error('Unexpected response: No session after sign-in');
-        return NextResponse.json({
-          error: 'Something went wrong during password reset verification',
+          error: 'Failed to update password: ' + updateError.message,
           status: 500
         });
       }
+      
+      console.log('Password updated successfully for user ID:', userId);
+      
+      // Return success response
+      return NextResponse.json({
+        success: true,
+        message: 'Password has been updated successfully. You can now log in with your new password.'
+      });
       
     } catch (error) {
       console.error('Error in reset password operation:', error);
