@@ -17,18 +17,7 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState("");
   const [isReady, setIsReady] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
-  
-  // Failsafe for navigation - if we're stuck in success state for too long, force redirect
-  useEffect(() => {
-    if (success) {
-      const timeoutId = setTimeout(() => {
-        console.log("Failsafe: forcing navigation to dashboard");
-        window.location.href = "/dashboard";
-      }, 5000); // 5 second failsafe
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [success]);
+  const [countdown, setCountdown] = useState(0);
   
   // Check for auth session on mount
   useEffect(() => {
@@ -117,15 +106,26 @@ export default function ResetPassword() {
     
     setError("");
     setSuccess("");
+    setCountdown(0);
+    
+    // Set up a failsafe redirect in case the main one fails
+    let redirectTimer = null;
+    const failsafeRedirect = () => {
+      console.log("Executing failsafe redirect");
+      window.location.href = '/dashboard';
+    };
+    redirectTimer = setTimeout(failsafeRedirect, 5000);
     
     // Validate passwords
     if (password !== confirmPassword) {
       setError("Passwords do not match");
+      clearTimeout(redirectTimer);
       return;
     }
     
     if (password.length < 6) {
       setError("Password must be at least 6 characters");
+      clearTimeout(redirectTimer);
       return;
     }
     
@@ -134,22 +134,6 @@ export default function ResetPassword() {
     try {
       console.log("Updating password...");
       
-      // Get user email before updating password
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        console.error("Error getting user:", userError);
-        throw userError;
-      }
-      
-      if (!userData?.user?.email) {
-        console.error("No user email found");
-        throw new Error("Could not retrieve user email for authentication");
-      }
-      
-      const userEmail = userData.user.email;
-      console.log("Retrieved user email:", userEmail);
-      
       // Update password
       const { error } = await supabase.auth.updateUser({
         password: password
@@ -157,44 +141,52 @@ export default function ResetPassword() {
       
       if (error) {
         console.error("Password update error:", error);
+        clearTimeout(redirectTimer);
         throw error;
       }
       
       console.log("Password updated successfully");
-      setSuccess("Password updated successfully! Signing in and redirecting...");
+      setSuccess("Password updated successfully! Redirecting to dashboard...");
       
-      // Clear existing session
-      console.log("Signing out to clear recovery session");
-      await supabase.auth.signOut();
+      // Start countdown from 3
+      setCountdown(3);
+      const countdownInterval = setInterval(() => {
+        setCountdown(prev => {
+          const next = prev - 1;
+          if (next <= 0) {
+            clearInterval(countdownInterval);
+          }
+          return next;
+        });
+      }, 1000);
       
-      // Sign in with new credentials
-      console.log("Signing in with new password");
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: userEmail,
-        password: password
-      });
+      // Force redirect to dashboard after a short delay
+      console.log("Starting redirection process to dashboard");
       
-      if (signInError) {
-        console.error("Sign in error:", signInError);
-        // Continue with redirection anyway
-        console.warn("Could not sign in automatically - user will need to login manually");
-      } else {
-        console.log("Sign-in successful");
-      }
-      
-      // Simplify redirection - use direct window.location after a delay
-      console.log("Setting up redirect to dashboard");
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_VERCEL_URL || window.location.origin;
+      // Use a simpler, more reliable redirect approach
       setTimeout(() => {
-        console.log("Executing redirect now");
-        window.location.href = `${siteUrl}/dashboard`;
+        console.log("Executing redirect to dashboard");
+        // Direct navigation is more reliable than router.push in some cases
+        window.location.href = '/dashboard';
       }, 1500);
       
     } catch (error) {
       console.error("Error in password update:", error);
       setError(error.message || "Failed to update password. Please try again.");
+      clearTimeout(redirectTimer);
+      setCountdown(0);
     } finally {
       setLoading(false);
+
+      // Ensure window.location.href is called even in error cases
+      if (success) {
+        setTimeout(() => {
+          if (window.location.pathname === '/reset-password') {
+            console.log("Forcing navigation after timeout");
+            window.location.href = '/dashboard';
+          }
+        }, 3000);
+      }
     }
   };
   
@@ -292,7 +284,9 @@ export default function ResetPassword() {
                       <div className="text-green-500 text-sm mb-1">{success}</div>
                       <div className="flex justify-center items-center">
                         <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2"></div>
-                        <span className="text-xs text-white">Redirecting to dashboard...</span>
+                        <span className="text-xs text-white">
+                          Redirecting to dashboard{countdown > 0 ? ` in ${countdown}...` : '...'}
+                        </span>
                       </div>
                     </div>
                   )}
@@ -301,12 +295,10 @@ export default function ResetPassword() {
                     <Button
                       type="submit"
                       variant="attractive"
-                      className={`w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm ${
-                        loading || success ? 'opacity-70 cursor-not-allowed' : ''
-                      }`}
-                      disabled={loading || success}
+                      className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
+                      disabled={loading}
                     >
-                      {loading ? "Updating..." : success ? "Updated!" : "Update Password"}
+                      {loading ? "Updating..." : "Update Password"}
                     </Button>
                   </div>
                   
