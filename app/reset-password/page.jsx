@@ -17,7 +17,7 @@ function ResetPasswordContent() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
-  const [showEmailSent, setShowEmailSent] = useState(false);
+  const [passwordResetComplete, setPasswordResetComplete] = useState(false);
 
   useEffect(() => {
     // Redirect to forgot-password if no email is provided
@@ -63,8 +63,11 @@ function ResetPasswordContent() {
       }
 
       // Show success message
-      setSuccess(data.message || "Password reset initiated. Please check your email.");
-      setShowEmailSent(true);
+      setSuccess(data.message || "Password updated successfully.");
+      setPasswordResetComplete(true);
+      
+      // Redirect to login after 3 seconds
+      setTimeout(() => router.push("/login"), 3000);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -85,7 +88,7 @@ function ResetPasswordContent() {
       <div className="flex flex-grow items-center justify-center">
         <main className="flex items-center justify-center px-8 py-8 sm:px-12 lg:px-16 lg:py-12">
           <div className="max-w-xl lg:max-w-3xl bg-white bg-opacity-10 p-8 rounded-lg shadow-lg backdrop-blur-md">
-            {!showEmailSent ? (
+            {!passwordResetComplete ? (
               <>
                 <h2 className="text-center text-2xl font-bold text-white sm:text-3xl md:text-4xl">
                   Reset Your Password
@@ -128,7 +131,7 @@ function ResetPasswordContent() {
                   </div>
 
                   {error && <div className="col-span-6 text-red-500 text-sm text-center">{error}</div>}
-                  {success && !showEmailSent && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
+                  {success && !passwordResetComplete && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
 
                   <div className="col-span-6">
                     <Button
@@ -137,7 +140,7 @@ function ResetPasswordContent() {
                       className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
                       disabled={loading}
                     >
-                      {loading ? "Processing..." : "Reset Password"}
+                      {loading ? "Updating Password..." : "Reset Password"}
                     </Button>
                   </div>
 
@@ -153,13 +156,13 @@ function ResetPasswordContent() {
               </>
             ) : (
               <div className="text-center">
-                <h2 className="text-2xl font-bold text-white mb-6">Check Your Email</h2>
+                <h2 className="text-2xl font-bold text-white mb-6">Password Reset Complete</h2>
                 <div className="bg-indigo-900 bg-opacity-50 p-6 rounded-lg mb-6">
                   <p className="text-white mb-4">
-                    We've sent a password reset link to <span className="font-semibold">{email}</span>.
+                    Your password has been successfully updated.
                   </p>
                   <p className="text-white">
-                    Please check your inbox and follow the instructions to complete the password reset.
+                    You will be redirected to the login page where you can sign in with your new password.
                   </p>
                 </div>
                 <Button
@@ -167,7 +170,7 @@ function ResetPasswordContent() {
                   variant="attractive"
                   className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
                 >
-                  Return to Login
+                  Go to Login
                 </Button>
               </div>
             )}

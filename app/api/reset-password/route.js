@@ -31,35 +31,65 @@ export async function POST(req) {
     }
 
     try {
-      console.log('Creating Supabase client');
-      // Create a client with service role key
-      const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      console.log('Creating Supabase client with service key');
+      // Create a Supabase client with the service role key
+      const adminAuthClient = createClient(supabaseUrl, supabaseServiceKey, {
         auth: {
           autoRefreshToken: false,
           persistSession: false
         }
       });
 
-      // Send a password reset email to the user
-      // Note: This is a workaround since we can't directly update passwords without a session
-      console.log('Sending password reset email');
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
-
-      if (resetError) {
-        console.error('Error sending reset email:', resetError);
-        throw new Error('Failed to send password reset email: ' + resetError.message);
+      // First, sign in as the user through the admin API
+      console.log('Signing in as the user through admin API');
+      
+      // 1. Get the user by email
+      const { data: getUserData, error: getUserError } = await adminAuthClient.auth.admin.listUsers();
+      
+      if (getUserError) {
+        console.error('Error listing users:', getUserError);
+        return NextResponse.json(
+          { error: 'Failed to list users: ' + getUserError.message },
+          { status: 500 }
+        );
       }
       
-      // For demonstration purposes, we'll pretend the password was updated directly
-      // In reality, the user would need to click the link in the email
-      console.log('Password reset email sent');
+      // Find the user with the matching email
+      const user = getUserData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
       
+      if (!user) {
+        console.error('User not found with email:', email);
+        return NextResponse.json(
+          { error: 'User not found with the provided email' },
+          { status: 404 }
+        );
+      }
+      
+      console.log('Found user with ID:', user.id);
+      
+      // 2. Update the user's password using the admin API
+      const { error: updateError } = await adminAuthClient.auth.admin.updateUserById(
+        user.id,
+        { password: password }
+      );
+
+      if (updateError) {
+        console.error('Error updating password:', updateError);
+        return NextResponse.json(
+          { error: 'Failed to update password: ' + updateError.message },
+          { status: 500 }
+        );
+      }
+      
+      console.log('Password updated successfully');
+      
+      // Return success response
       return NextResponse.json({
         success: true,
-        message: 'Password reset initiated. Check your email for further instructions.',
+        message: 'Password updated successfully. You can now log in with your new password.',
       });
     } catch (error) {
-      console.error('Error in Supabase operation:', error);
+      console.error('Error in password reset operation:', error);
       return NextResponse.json(
         { error: error.message || 'Failed to process password reset' },
         { status: 500 }
