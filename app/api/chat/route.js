@@ -22,32 +22,52 @@ export const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 // 🔹 Dynamic System Prompt Generator
 const getSystemPrompt = () => {
   return `
-You are an AI Assistant with START, PLAN, ACTION, Observation and Output State.
-Wait for the user prompt and first PLAN using available tools.
-After Planning, Take the action with appropriate tools and wait for Observation based on Action.
-Once you get the observations, Return the AI response based on START prompt and observations
+You are an intelligent AI Assistant for an expense tracking application.
+Your primary role is to help users manage their expenses, offer financial insights, and provide useful information.
 
-## IMPORTANT NOTE ABOUT JSON FORMAT
-You MUST follow the exact JSON format shown in the examples. Do not modify the structure.
-- Start directly with plan and action steps, no need to echo the user query
-- Always begin with "START:" followed by a plan step
-- Use "plan" field (not "logic") in the plan object and ALWAYS specify the function name with parentheses (e.g., "i will use addExpense() function")
-- Use "obervation" (not "observation") as the type for observations
-- Use "action" with "recognize" for entity extraction and "function" for function calls
-- Always include "input" field with all action objects
-- Keep separate objects for temporal and currency information
-- Follow the examples exactly as shown
+## CORE CAPABILITIES
+1. Add new expenses with category, amount, currency, and other details
+2. List expenses for specific time periods or categories
+3. Calculate total expenses across different time frames
+4. Answer general questions about finance and expense management
+5. Analyze spending patterns and provide insights about spending habits
 
-## RESPONSE WORKFLOW
-For EVERY query, generate MULTIPLE JSON OBJECTS in this sequence:
+## CONVERSATION APPROACH
+- Maintain a natural, helpful tone throughout the conversation
+- Remember context from previous messages in the conversation
+- Answer general questions even when they're not directly related to expenses
+- Ask for clarification when user queries are ambiguous
+- When expense information is incomplete, guide users by asking specific follow-up questions
 
-1. START STEPS: Series of JSON objects with "type" key beginning with "plan"
-2. FINAL RESPONSE: Single JSON with "function" key
+## SPENDING ANALYSIS QUERIES
+For questions about spending habits like:
+- "Where does my money go?"
+- "What are my top spending categories?"
+- "Am I spending more on [category] than last month?"
+- "How does my spending on [category1] compare to [category2]?"
+- "How consistent is my spending on [category]?"
+- "What day/time do I spend the most?"
+
+Respond with getTotalExpense function for each category needed and compare the results.
+
+Example spending habits response for "What are my top spending categories this month?":
+{"function": "getTotalExpense", "params": {"period": "this month"}}
+
+Example for "How does my food spending compare to transportation?":
+{"function": "getTotalExpense", "params": {"category": "food", "period": "this month"}}
+FOLLOWED BY:
+{"function": "getTotalExpense", "params": {"category": "transportation", "period": "this month"}}
+
+Example for "Am I spending more on entertainment than last month?":
+{"function": "getTotalExpense", "params": {"category": "entertainment", "period": "this month"}}
+FOLLOWED BY:
+{"function": "getTotalExpense", "params": {"category": "entertainment", "period": "last month"}}
 
 ## STRUCTURED REASONING PROCESS
 Generate these JSON objects for expense queries:
 
 ### 1. REASONING PLAN
+START:
 {"type": "plan", "plan": "[ALWAYS specify which function you will use, e.g., 'i will use addExpense() function']"}
 
 ### 2. RECOGNITION STEPS
@@ -71,9 +91,11 @@ For calls to system functions:
 
 ### 7. FINAL ACTION
 {"type": "action", "function": "[function name]", "input": "[parameters in comma-separated format]"}
-
-### 8. ERROR HANDLING (if needed)
-{"type": "error", "missing_fields": ["field1", ...], "message": "..."}
+Final Response:
+{"function": "[function name]", "params": {
+  "[param1]": "[value1]",
+  "[param2]": "[value2]"
+}}
 
 ## FUNCTION SPECIFICATIONS
 ### addExpense(params)
@@ -102,6 +124,26 @@ When using period parameter, start_date and end_date are calculated automaticall
 ### getCurrentDate()
 Returns the current date in YYYY-MM-DD format. Use this instead of hardcoding dates.
 
+## EXPENSE CATEGORIZATION
+Automatically categorize mentioned items into these categories:
+- FOOD: coffee, tea, breakfast, lunch, dinner, meal, groceries, restaurant, cafe, drinks, protein, supplements, lunchbox, kitchenware, cooking
+- HOUSING: cup, plate, chair, bed, table, lamp, furniture, rent, bills, utilities
+- TRANSPORTATION: uber, taxi, bus, train, ticket, fare, gas, petrol, flight
+- ENTERTAINMENT: movie, game, concert, book, netflix, spotify, music, theater
+- OTHERS: medicine, doctor, gym, salon, education, gift, donation, charity
+
+## STRICT OUTPUT RULES
+1. Every JSON object must have "type" property
+2. Final response must be standalone JSON with "function"
+3. Use double quotes ONLY
+4. Never combine multiple types in one JSON
+5. Always begin with "START:" followed by a plan step
+6. Use "plan" field (not "logic") in plan objects and ALWAYS mention function name with parentheses (e.g., "i will use addExpense() function")
+7. Use "obervation" (not "observation") as the type for observations
+8. Use "action" with "recognize" for entity extraction and "function" for function calls
+9. Always include "input" field with all action objects
+10. Keep separate objects for temporal and currency information
+
 ## TIME PERIOD HANDLING
 Always use the period parameter for temporal queries. The system will automatically handle:
 
@@ -121,39 +163,17 @@ Always use the period parameter for temporal queries. The system will automatica
    - "this year" - January 1 to December 31 of current year
    - "last year" - January 1 to December 31 of previous year
 
-EXAMPLES:
-- For "Show my expenses today" → Use period: "today"
-- For "List last month's expenses" → Use period: "last month"
-- For "How much did I spend yesterday?" → Use period: "yesterday"
+## GENERAL CONVERSATION
+For non-expense queries:
+{"type": "chat", "response": "[Your answer]"}
 
-IMPORTANT: When listing expenses with no specific category, leave the category parameter empty (null or undefined), DO NOT use "all" as a category.
-Example: For "List all expenses" → Call listExpenses({}) with no category parameter.
+## ERROR HANDLING
+When information is incomplete:
+{"type": "error", "missing_fields": ["field1", ...], "message": "..."}
 
-## STRICT OUTPUT RULES
-1. Every JSON object must have "type" property
-2. Final response must be standalone JSON with "function"
-3. Use double quotes ONLY
-4. Never combine multiple types in one JSON
-5. Follow the exact field names from the examples:
-   - Use "plan" (not "logic") in plan objects and ALWAYS mention function name with parentheses (e.g., "i will use addExpense() function")
-   - Use "obervation" (not "observation")
-   - Use "action" with "recognize" for entity extraction (e.g., "recognize": "amount", "input": "500")
-   - Use "action" with "function" for function calls (e.g., "function": "getCurrentDate", "input": "today")
-   - Always use "input" field with action objects, not "params"
-   - For the final function action, use comma-separated values (e.g., "input": "food, 500, INR, today")
-6. For list-style identifications, use: "identified": "[item1, item2]" format
-7. Keep temporal information in a separate object
-8. Keep currency information in a separate object
-
-## EXPENSE CATEGORIZATION RULES
-CRITICAL: When a user mentions specific items, categorize them correctly:
-- FOOD: coffee, tea, breakfast, lunch, dinner, meal, groceries, restaurant, cafe, drinks
-- HOUSING: cup, plate, chair, bed, table, lamp, furniture, rent, bills, utilities
-- TRANSPORTATION: uber, taxi, bus, train, ticket, fare, gas, petrol, flight
-- ENTERTAINMENT: movie, game, concert, book, netflix, spotify, music, theater
-- OTHERS: medicine, doctor, gym, salon, education, gift, donation, charity
-
-For any query like "i bought X add expense of it", identify the category and call addExpense with the appropriate category!
+Common errors:
+- Missing amount: {"type": "error", "missing_fields": ["amount"], "message": "Please specify the expense amount"}
+- Invalid date: {"type": "error", "error_code": "invalid_date", "message": "Date format must be YYYY-MM-DD"}
 
 ## EXAMPLE FLOWS
 
@@ -193,23 +213,7 @@ Final Response:
   "period": "last month"
 }}
 
-### Example 3: Listing Expenses with Period
-User: "List yesterday's expenses"
-
-START:
-{"type": "plan", "plan": "i will use listExpenses() function with yesterday as period"}
-{"type": "action", "recognize": "period", "input": "yesterday"}
-{"type": "plan", "plan": "get the date range for yesterday"}
-{"type": "action", "function": "getDateRange", "input": "yesterday"}
-{"type": "obervation", "identified": "[period]"}
-{"type": "temporal", "period": "yesterday"}
-{"type": "action", "function": "listExpenses", "input": "period=yesterday"}
-Final Response:
-{"function": "listExpenses", "params": {
-  "period": "yesterday"
-}}
-
-### Example 4: Adding an Expense with Category Detection
+### Example 3: Adding an Expense with Category Detection
 User: "I bought coffee for 5 dollars"
 
 START:
@@ -232,67 +236,84 @@ Final Response:
   "currency": "USD"
 }}
 
-## GENERAL CONVERSATION
-For non-expense queries:
-{"type": "chat", "response": "[Your answer]"}
-Example:
-{"type": "chat", "response": "Here's a fun fact: The first computer virus was created in 1983!"}
+### Example 4: Handling protein supplements
+User: "I spent 500 bucks on protein yesterday"
 
-## ERROR PROTOCOLS
-Reject invalid requests with:
-{"type": "error", "error_code": "invalid_request", "message": "..."}
+START:
+{"type": "plan", "plan": "i will use addExpense() function to add the protein expense"}
+{"type": "action", "recognize": "item", "input": "protein"}
+{"type": "plan", "plan": "identify the category for protein", "input": "protein"}
+{"type": "action", "recognize": "protein", "input": "food"}
+{"type": "action", "recognize": "amount", "input": "500"}
+{"type": "action", "recognize": "currency", "input": "bucks"}
+{"type": "plan", "plan": "convert currency slang to standard format", "input": "bucks"}
+{"type": "action", "recognize": "bucks", "input": "USD"}
+{"type": "plan", "plan": "get date information", "input": "yesterday"}
+{"type": "action", "function": "getDateRange", "input": "yesterday"}
+{"type": "obervation", "identified": "[item, category, amount, currency, date]"}
+{"type": "temporal", "period": "yesterday"}
+{"type": "currency", "currency": "USD"}
+{"type": "action", "function": "addExpense", "input": "food, 500, USD, yesterday"}
+Final Response:
+{"function": "addExpense", "params": {
+  "category": "food",
+  "amount": 500,
+  "currency": "USD",
+  "date": "yesterday"
+}}
 
-Common errors:
-- Missing amount: {"type": "error", "missing_fields": ["amount"], "message": "Please specify the expense amount"}
-- Invalid date: {"type": "error", "error_code": "invalid_date", "message": "Date format must be YYYY-MM-DD"}
+### Example 5: Analyzing Spending Habits
+User: "What are my top spending categories this month?"
 
-## CURRENT DATE CONTEXT
-- Default Currency: INR
-- Supported Categories: food, housing, transportation, entertainment, others
-- Supported Time Periods: today, yesterday, this week, last week, this month, last month, this year, last year
+START:
+{"type": "plan", "plan": "i will use getTotalExpense() function to analyze spending by category"}
+{"type": "action", "recognize": "period", "input": "this month"}
+{"type": "plan", "plan": "get total expenses for this month across all categories"}
+{"type": "action", "function": "getTotalExpense", "input": "period=this month"}
+{"type": "obervation", "identified": "[period, spending_analysis]"}
+{"type": "temporal", "period": "this month"}
+Final Response:
+{"function": "getTotalExpense", "params": {
+  "period": "this month"
+}}
 
-## CATEGORY RECOGNITION GUIDE
-Recognize these common expense subcategories:
+### Example 6: Comparing Category Spending
+User: "How does my food spending compare to transportation?"
 
-### Food
-- Meals: breakfast, lunch, dinner, snack, brunch, coffee, tea, drinks
-- Locations: restaurant, cafe, diner, food court, takeout, delivery
-- Types: groceries, vegetables, fruits, meat, dairy, bakery
-- Beverages: coffee, tea, juice, drinks, soda, water, alcohol
+START:
+{"type": "plan", "plan": "i will use getTotalExpense() function to compare food and transportation categories"}
+{"type": "action", "recognize": "categories", "input": "food, transportation"}
+{"type": "plan", "plan": "get food expenses for current period"}
+{"type": "action", "function": "getTotalExpense", "input": "category=food, period=this month"}
+{"type": "plan", "plan": "get transportation expenses for same period"}
+{"type": "action", "function": "getTotalExpense", "input": "category=transportation, period=this month"}
+{"type": "obervation", "identified": "[categories, period, comparison]"}
+{"type": "temporal", "period": "this month"}
+Final Response:
+{"function": "getTotalExpense", "params": {
+  "category": "food",
+  "period": "this month"
+}}
 
-### Housing
-- Rent: apartment rent, house rent, lease payment
-- Utilities: electricity bill, water bill, gas bill, internet bill, phone bill
-- Furniture: table, chair, sofa, bed, mattress, desk, lamp, curtains
-- Supplies: cleaning supplies, kitchen supplies, bathroom supplies, home decor
-
-### Transportation
-- Public: bus ticket, train fare, subway, metro, taxi, uber, lyft, rickshaw, auto
-- Private: car fuel, gas, petrol, diesel, parking fee, toll, car wash, car repair
-- Travel: flight ticket, hotel booking, accommodation, travel insurance
-
-### Entertainment
-- Activities: movie ticket, concert ticket, theme park, gaming, sports event
-- Subscriptions: streaming service, netflix, prime, disney+, spotify, membership fee
-- Hobbies: books, music, art supplies, sporting goods, video games
-
-### Others
-- Personal care: haircut, salon, spa, skincare, grooming
-- Health: medicine, doctor visit, medical test, therapy, gym membership
-- Education: tuition, textbooks, course fee, coaching, workshop
-- Gifts: presents, charity, donation, gift card
+Remember to maintain conversation context between user queries and provide helpful, clear responses.
 `;
 };
 
-// Add a new function to get the current date
+// Add a new function to get the current date (adjusted for IST - Indian Standard Time)
 function getCurrentDate() {
   const now = new Date();
+  // Add 5 hours and 30 minutes to account for IST timezone
+  now.setHours(now.getHours() + 5);
+  now.setMinutes(now.getMinutes() + 30);
   return now.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
 }
 
 // Enhanced date utilities for handling various time period references
 function getDateRange(periodReference) {
+  // Create a date with IST adjustment (UTC+5:30)
   const now = new Date();
+  now.setHours(now.getHours() + 5);
+  now.setMinutes(now.getMinutes() + 30);
   const today = now.toISOString().split('T')[0];
   
   // Helper to format date to YYYY-MM-DD
@@ -548,7 +569,7 @@ async function getTotalExpense({ category = null, day = null, month = null, year
     logSystemFormat('observation', "category");
   }
   
-  let query = supabase.from("expenses").select("amount, currency, category").eq("user_id", user_id);
+  let query = supabase.from("expenses").select("amount, currency, category, date").eq("user_id", user_id);
   
   // Handle period-based queries using the new date range function
   if (period) {
@@ -611,55 +632,102 @@ async function getTotalExpense({ category = null, day = null, month = null, year
     Object.entries(currencyCounts).sort((a, b) => b[1] - a[1])[0][0] : 
     "unknown currency";
   
+  // For spending analysis, include the category breakdown
+  let categoryData = {};
+  // Special handling for spending analysis queries
+  if (!category) {
+    // Group by category
+    data.forEach(item => {
+      const cat = item.category || 'uncategorized';
+      if (!categoryData[cat]) {
+        categoryData[cat] = {
+          total: 0,
+          count: 0
+        };
+      }
+      categoryData[cat].total += item.amount;
+      categoryData[cat].count++;
+    });
+    
+    // Sort categories by total amount
+    categoryData = Object.fromEntries(
+      Object.entries(categoryData)
+        .sort((a, b) => b[1].total - a[1].total)
+        .map(([cat, data]) => {
+          // Calculate percentage of total
+          data.percentage = data.total / total * 100;
+          return [cat, data];
+        })
+    );
+  }
+  
   return {
     total,
     currency: mostCommonCurrency,
-    count: data.length
+    count: data.length,
+    categoryData: Object.keys(categoryData).length > 0 ? categoryData : undefined,
+    data: data // Include the raw data for more detailed analysis if needed
   };
 }
 
 // 🔹 List Expenses (now filters by user_id)
 async function listExpenses({ start_date, end_date, category, period }, user_id) {
-  logSystemFormat('process', "Fetching expenses for user: " + user_id);
-  
-  if (period) {
-    logSystemFormat('temporal', { period });
-  } else if (start_date && end_date) {
-    logSystemFormat('temporal', { date: `${start_date} to ${end_date}` });
-  }
-  
-  if (category) {
-    logSystemFormat('observation', "category");
-  }
-
-  let query = supabase.from("expenses").select("*").eq("user_id", user_id);
-  
-  // First check if a period is specified and convert it to date range
+  // If a period is provided, convert it to date range
   if (period) {
     const dateRange = getDateRange(period);
     if (dateRange) {
       start_date = dateRange.start_date;
       end_date = dateRange.end_date;
-      logSystemFormat('process', `Applied date range for period: ${period}`);
-      logSystemFormat('temporal', { period });
+      console.log(`Using date range for period '${period}':`, start_date, "to", end_date);
     }
   }
   
+  // Build the query
+  let query = supabase.from("expenses").select("*").eq("user_id", user_id);
+  
   // Apply filters
-  if (category) query = query.eq("category", category);
-  if (start_date && end_date) query = query.gte("date", start_date).lte("date", end_date);
-
-  const { data, error } = await query;
-  if (error) {
-    console.error("❌ Supabase Error:", error.message);
-    throw new Error(`Failed to fetch expenses: ${error.message}`);
+  if (category) {
+    query = query.eq("category", category.toLowerCase());
   }
-
-  return data;
+  
+  if (start_date) {
+    query = query.gte("date", start_date);
+  }
+  
+  if (end_date) {
+    query = query.lte("date", end_date);
+  }
+  
+  // Order by date desc (newest first)
+  query = query.order("date", { ascending: false });
+  
+  // Execute the query
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error("Error listing expenses:", error);
+    throw new Error(`Failed to list expenses: ${error.message}`);
+  }
+  
+  // Debug log
+  if (period === 'today') {
+    // Calculate IST date to confirm what we're searching for
+    const now = new Date();
+    now.setHours(now.getHours() + 5);
+    now.setMinutes(now.getMinutes() + 30);
+    const istTodayStr = now.toISOString().split('T')[0];
+    console.log(`Listing expenses for TODAY in IST: ${istTodayStr}`);
+    console.log(`Actual query dates used: start=${start_date}, end=${end_date}`);
+    console.log(`Found ${data.length} expenses for today`);
+  }
+  
+  return data || [];
 }
 
 // Simple conversation memory to maintain context between messages
 const conversationState = new Map();
+// Conversation history to maintain dialog context
+const conversationHistory = new Map();
 
 // Conversation state constants
 const STATE_TYPES = {
@@ -669,11 +737,410 @@ const STATE_TYPES = {
   NONE: 'none'
 };
 
+// Function to get the conversation history for a user (last 5 interactions)
+function getUserHistory(user_id) {
+  if (!conversationHistory.has(user_id)) {
+    conversationHistory.set(user_id, []);
+  }
+  return conversationHistory.get(user_id);
+}
+
+// Function to update the conversation history
+function updateConversationHistory(user_id, query, response) {
+  const history = getUserHistory(user_id);
+  history.push({
+    query,
+    response,
+    timestamp: new Date().toISOString()
+  });
+  
+  // Keep only the last 5 interactions to avoid excessive memory usage
+  if (history.length > 5) {
+    history.shift();
+  }
+  
+  conversationHistory.set(user_id, history);
+}
+
 // 🔹 AI Chat Function (now requires user session)
 export const runChat = async (userQuery, user_id) => {
   console.log(`Received query from user ${user_id}: ${userQuery}`);
   
-  const queryLower = userQuery.toLowerCase();
+  const queryLower = userQuery.toLowerCase().trim();
+  let response = "";
+
+  // Handle multi-expense requests
+  if ((queryLower.includes(" and ") || queryLower.includes(",")) && 
+      (queryLower.includes("spent") || queryLower.includes("spend") || 
+       queryLower.includes("bought") || queryLower.includes("purchased"))) {
+    console.log("Detected potential multi-expense query");
+    
+    // Respond with a note about adding one expense at a time
+    response = `I noticed you're trying to add multiple expenses. Let's add them one by one for better tracking.
+
+Let's start with the first expense. Please tell me:
+1. The category (food, housing, transportation, entertainment, or others)
+2. The exact amount
+3. Currency
+
+For example: "Add food expense 500 USD"`;
+    
+    updateConversationHistory(user_id, userQuery, response);
+    return response;
+  }
+
+  // Special handling for protein and supplements which should be categorized as food
+  if ((queryLower.includes("protein") || queryLower.includes("supplement")) && 
+      (queryLower.includes("spent") || queryLower.includes("spend") || 
+       queryLower.includes("bought") || queryLower.includes("purchased"))) {
+    console.log("Detected protein/supplement expense, categorizing as food");
+    
+    // Try to extract amount and currency
+    const amountMatch = queryLower.match(/\b(\d+(?:\.\d+)?)\s*(?:dollars|bucks|usd|inr|eur|rupees)?\b/);
+    const currencyMatch = queryLower.match(/\b(dollars|bucks|usd|inr|eur|rupees)\b/);
+    
+    if (amountMatch) {
+      const amount = parseFloat(amountMatch[1]);
+      const currency = currencyMatch ? mapToCurrency(currencyMatch[1]) : "INR";
+      
+      // Try to extract date
+      let date = getCurrentDate();
+      if (queryLower.includes("yesterday")) {
+        // Use India timezone (IST) which is UTC+5:30
+        const yesterday = new Date();
+        // Add 5 hours and 30 minutes to account for IST timezone
+        yesterday.setHours(yesterday.getHours() + 5);
+        yesterday.setMinutes(yesterday.getMinutes() + 30);
+        yesterday.setDate(yesterday.getDate() - 1);
+        date = yesterday.toISOString().split('T')[0];
+        console.log("Setting date to yesterday (IST):", date);
+      } else if (queryLower.match(/\b(\d+)\s*days?\s*ago\b/)) {
+        const daysAgoMatch = queryLower.match(/\b(\d+)\s*days?\s*ago\b/);
+        const daysAgo = parseInt(daysAgoMatch[1]);
+        // Use India timezone (IST) which is UTC+5:30
+        const pastDate = new Date();
+        // Add 5 hours and 30 minutes to account for IST timezone
+        pastDate.setHours(pastDate.getHours() + 5);
+        pastDate.setMinutes(pastDate.getMinutes() + 30);
+        pastDate.setDate(pastDate.getDate() - daysAgo);
+        date = pastDate.toISOString().split('T')[0];
+        console.log(`Setting date to ${daysAgo} days ago (IST):`, date);
+      }
+      
+      try {
+        const result = await addExpense({
+          category: "food",  // Protein and supplements are food
+          amount: amount,
+          currency: currency,
+          payment_method: "cash",
+          date: date
+        }, user_id);
+        
+        // Create a nicer response message
+        response = `✅ Added your ${queryLower.includes("protein") ? "protein" : "supplement"} expense to the food category:
+• Amount: ${amount} ${currency}
+• Date: ${date} 
+• Category: Food
+
+Your expense has been recorded in the database.`;
+        
+        updateConversationHistory(user_id, userQuery, response);
+        return response;
+      } catch (error) {
+        console.error("Error adding protein/supplement expense:", error);
+        logSystemFormat('error', { message: `Failed to add expense: ${error.message}` });
+        return `I had trouble adding your expense. Please try again with more details.`;
+      }
+    }
+  }
+  
+  // Special handling for standalone supplement mentions (without spend/bought verbs)
+  if (queryLower.includes("protein") || queryLower.includes("supplement")) {
+    console.log("Detected standalone protein/supplement mention");
+    
+    // Try to extract amount and currency
+    const amountMatch = queryLower.match(/\b(\d+(?:\.\d+)?)\s*(?:dollars|bucks|usd|inr|eur|rupees)?\b/);
+    const currencyMatch = queryLower.match(/\b(dollars|bucks|usd|inr|eur|rupees)\b/);
+    
+    if (amountMatch) {
+      const amount = parseFloat(amountMatch[1]);
+      const currency = currencyMatch ? mapToCurrency(currencyMatch[1]) : "USD"; // Default to USD for bucks
+      
+      // Try to extract date
+      let date = getCurrentDate();
+      
+      if (queryLower.includes("yesterday")) {
+        // Use India timezone (IST) which is UTC+5:30
+        const yesterday = new Date();
+        // Add 5 hours and 30 minutes to account for IST timezone
+        yesterday.setHours(yesterday.getHours() + 5);
+        yesterday.setMinutes(yesterday.getMinutes() + 30);
+        yesterday.setDate(yesterday.getDate() - 1);
+        date = yesterday.toISOString().split('T')[0];
+        console.log("Setting date to yesterday (IST):", date);
+      } else if (queryLower.match(/\b(\d+)\s*days?\s*ago\b/)) {
+        const daysAgoMatch = queryLower.match(/\b(\d+)\s*days?\s*ago\b/);
+        const daysAgo = parseInt(daysAgoMatch[1]);
+        
+        // Use India timezone (IST) which is UTC+5:30
+        const pastDate = new Date();
+        // Add 5 hours and 30 minutes to account for IST timezone
+        pastDate.setHours(pastDate.getHours() + 5);
+        pastDate.setMinutes(pastDate.getMinutes() + 30);
+        pastDate.setDate(pastDate.getDate() - daysAgo);
+        date = pastDate.toISOString().split('T')[0];
+        console.log(`Setting date to ${daysAgo} days ago (IST):`, date);
+      }
+      
+      try {
+        const result = await addExpense({
+          category: "food",  // Protein and supplements are food
+          amount: amount,
+          currency: currency,
+          payment_method: "cash",
+          date: date
+        }, user_id);
+        
+        // Create a nicer response message
+        // Add debug log
+        console.log(`Using date for ${queryLower.includes("protein") ? "protein" : "supplement"} expense:`, date);
+        
+        response = `✅ Added your ${queryLower.includes("protein") ? "protein" : "supplement"} expense to the food category:
+• Amount: ${amount} ${currency}
+• Date: ${date}
+• Category: Food
+
+Your expense has been recorded in the database.`;
+        
+        updateConversationHistory(user_id, userQuery, response);
+        return response;
+      } catch (error) {
+        console.error("Error adding protein/supplement expense:", error);
+        logSystemFormat('error', { message: `Failed to add expense: ${error.message}` });
+        return `I had trouble adding your expense. Please try again with more details.`;
+      }
+    }
+  }
+  
+  // Special handling for number-first expressions or even more fragmented phrases
+  // This handles cases like "1000 bucks on supplements 4 days ago"
+  if (/^\d+/.test(queryLower) || // Starts with a number
+      (queryLower.match(/^\s*and\s+\d+/) && queryLower.match(/\b(\d+(?:\.\d+)?)\s*(?:dollars|bucks|usd|inr|eur|rupees)?\b/))) { // Starts with "and [number]"
+    
+    // Try to extract amount and currency
+    const amountMatch = queryLower.match(/\b(\d+(?:\.\d+)?)\s*(?:dollars|bucks|usd|inr|eur|rupees)?\b/);
+    const currencyMatch = queryLower.match(/\b(dollars|bucks|usd|inr|eur|rupees)\b/);
+    
+    // Check if it contains supplements or protein
+    const hasSupplements = queryLower.includes("supplement");
+    const hasProtein = queryLower.includes("protein");
+    
+    if (amountMatch && (hasSupplements || hasProtein)) {
+      console.log("Detected number-first protein/supplement mention");
+      
+      const amount = parseFloat(amountMatch[1]);
+      const currency = currencyMatch ? mapToCurrency(currencyMatch[1]) : "USD"; // Default to USD for bucks
+      
+      // Try to extract date
+      let date = getCurrentDate();
+      
+      if (queryLower.includes("yesterday")) {
+        // Use India timezone (IST) which is UTC+5:30
+        const yesterday = new Date();
+        // Add 5 hours and 30 minutes to account for IST timezone
+        yesterday.setHours(yesterday.getHours() + 5);
+        yesterday.setMinutes(yesterday.getMinutes() + 30);
+        yesterday.setDate(yesterday.getDate() - 1);
+        date = yesterday.toISOString().split('T')[0];
+        console.log("Setting date to yesterday (IST):", date);
+      } else if (queryLower.match(/\b(\d+)\s*days?\s*ago\b/)) {
+        const daysAgoMatch = queryLower.match(/\b(\d+)\s*days?\s*ago\b/);
+        const daysAgo = parseInt(daysAgoMatch[1]);
+        
+        // Use India timezone (IST) which is UTC+5:30
+        const pastDate = new Date();
+        // Add 5 hours and 30 minutes to account for IST timezone
+        pastDate.setHours(pastDate.getHours() + 5);
+        pastDate.setMinutes(pastDate.getMinutes() + 30);
+        pastDate.setDate(pastDate.getDate() - daysAgo);
+        date = pastDate.toISOString().split('T')[0];
+        console.log(`Setting date to ${daysAgo} days ago (IST):`, date);
+      }
+      
+      try {
+        const result = await addExpense({
+          category: "food",  // Protein and supplements are food
+          amount: amount,
+          currency: currency,
+          payment_method: "cash",
+          date: date
+        }, user_id);
+        
+        // Create a nicer response message
+        const itemType = hasProtein ? "protein" : "supplement";
+        
+        // Add debug log
+        console.log(`Using date for ${itemType} expense:`, date);
+        
+        response = `✅ Added your ${itemType} expense to the food category:
+• Amount: ${amount} ${currency}
+• Date: ${date}
+• Category: Food
+
+Your expense has been recorded in the database.`;
+        
+        updateConversationHistory(user_id, userQuery, response);
+        return response;
+      } catch (error) {
+        console.error("Error adding protein/supplement expense:", error);
+        logSystemFormat('error', { message: `Failed to add expense: ${error.message}` });
+        return `I had trouble adding your expense. Please try again with more details.`;
+      }
+    }
+  }
+  
+  // Helper function to map common currency terms to standard codes
+  function mapToCurrency(term) {
+    const map = {
+      'dollars': 'USD',
+      'bucks': 'USD',
+      'usd': 'USD',
+      'inr': 'INR',
+      'rupees': 'INR',
+      'eur': 'EUR',
+      'euro': 'EUR',
+      'euros': 'EUR'
+    };
+    return map[term.toLowerCase()] || 'INR';
+  }
+  
+  // Helper function to format date in a nicer way
+  function formatDate(dateString, userQuery = '') {
+    // Ensure we have a valid date
+    if (!dateString) {
+      console.error("Invalid date string provided to formatDate:", dateString);
+      return "Unknown date";
+    }
+    
+    try {
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.error("Invalid date in formatDate:", dateString);
+        return "Unknown date";
+      }
+      
+      // Get today and yesterday dates for relative formatting
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      // Format with relative terms if recent
+      const expenseDate = new Date(date);
+      expenseDate.setHours(0, 0, 0, 0);
+      
+      if (expenseDate.getTime() === today.getTime()) {
+        return "Today";
+      } else if (expenseDate.getTime() === yesterday.getTime()) {
+        return "Yesterday";
+      } else {
+        // For dates in the user's query with a specific "X days ago" mention,
+        // extract this directly from the original query if possible
+        const queryLower = userQuery.toLowerCase();
+        const daysAgoMatch = queryLower?.match(/\b(\d+)\s*days?\s*ago\b/);
+        if (daysAgoMatch) {
+          const daysAgo = parseInt(daysAgoMatch[1]);
+          return `${daysAgo} days ago`;
+        }
+        
+        // Otherwise calculate days difference
+        const diffTime = today.getTime() - expenseDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays > 0 && diffDays < 7) {
+          return `${diffDays} days ago`;
+        }
+      }
+      
+      // Otherwise use standard date format
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      console.error("Error in formatDate:", error);
+      return dateString; // Fall back to original string if parsing fails
+    }
+  }
+
+  // Handle simple greetings directly without going to the AI model
+  if (["hi", "hello", "hey", "greetings", "howdy"].includes(queryLower)) {
+    console.log("Handling simple greeting directly");
+    const timeOfDay = getTimeOfDay();
+    response = `Hello there! Good ${timeOfDay}. I'm your AI assistant for expense tracking. How can I help you today?`;
+    
+    updateConversationHistory(user_id, userQuery, response);
+    return response;
+  }
+  
+  // Handle common questions about the assistant
+  if (queryLower.includes("what can you do") || 
+      queryLower.includes("what can you help me with") || 
+      queryLower.includes("what all can you do") ||
+      queryLower === "help" ||
+      queryLower.includes("what are your capabilities") ||
+      // Add more casual variants
+      queryLower.includes("what can u do") ||
+      queryLower.includes("what can u help me with") ||
+      queryLower.includes("what u can do") ||
+      queryLower.includes("what do u do") ||
+      queryLower.includes("what do you do") ||
+      queryLower === "what can you do?" ||
+      queryLower === "what can u do?" ||
+      queryLower === "help me" ||
+      queryLower.includes("how can you help") ||
+      queryLower.includes("how can u help") ||
+      queryLower.includes("capabilities") ||
+      queryLower.includes("functions")) {
+    response = `I can help you with:
+1. Tracking your expenses - just tell me what you spent money on
+2. Adding new expenses with details like amount, category, and payment method
+3. Getting summaries of your spending by category or time period
+4. Listing your recent expenses
+5. Answering questions about your spending habits
+
+Try saying something like:
+- "I spent 20 bucks on coffee"
+- "Show my expenses for this month"
+- "How much did I spend on food yesterday?"
+- "Add a transportation expense"`;
+
+    updateConversationHistory(user_id, userQuery, response);
+    return response;
+  }
+  
+  // Handle questions about the assistant itself
+  if (queryLower.includes("who are you") || 
+      queryLower.includes("what are you") || 
+      queryLower === "about you" ||
+      queryLower.includes("introduce yourself")) {
+    response = `I'm your AI assistant for expense tracking. I'm designed to help you keep track of your spending, categorize expenses, and provide insights about your financial habits. I can understand natural language instructions and help you manage your expenses efficiently.`;
+    
+    updateConversationHistory(user_id, userQuery, response);
+    return response;
+  }
+  
+  // Add function to get time of day for greetings
+  function getTimeOfDay() {
+    const hour = new Date().getHours();
+    if (hour < 12) return "morning";
+    if (hour < 17) return "afternoon";
+    return "evening";
+  }
 
   // Check for single numbers that might be amounts in an ongoing conversation
   const isJustAmount = /^\s*\d+(?:\.\d+)?\s*$/.test(queryLower);
@@ -828,19 +1295,147 @@ export const runChat = async (userQuery, user_id) => {
         }
       });
       
-      return `✅ Expense added successfully!
-
-📊 **Expense Details:**
-• Category: ${userState.category.charAt(0).toUpperCase() + userState.category.slice(1)}${itemText}
-• Amount: ${userState.amount} ${userState.currency}
-• Payment Method: ${payment_method}
-• Date: ${today}
-
-Your expense has been recorded in the database.`;
+      updateConversationHistory(user_id, userQuery, result.message);
+      return result.message;
     } catch (error) {
       console.error("Error adding expense with payment method:", error);
       logSystemFormat('error', { message: `Failed to add expense: ${error.message}` });
       return `I had trouble adding your expense. Please try again with complete details.`;
+    }
+  }
+
+  // Special handling for spending habit analysis questions
+  if (queryLower.includes("spending habit") || 
+      queryLower.includes("spending pattern") || 
+      queryLower.includes("spend most on") ||
+      queryLower.includes("top spending") || 
+      queryLower.includes("spending trend") ||
+      queryLower.includes("spending breakdown") ||
+      (queryLower.includes("where") && queryLower.includes("money") && (queryLower.includes("go") || queryLower.includes("goes") || queryLower.includes("went")))) {
+    
+    console.log("Detected spending analysis query");
+    
+    // Determine time period
+    let period = "this month"; // Default to current month
+    if (queryLower.includes("last month")) {
+      period = "last month";
+    } else if (queryLower.includes("this week")) {
+      period = "this week";
+    } else if (queryLower.includes("last week")) {
+      period = "last week";
+    } else if (queryLower.includes("this year")) {
+      period = "this year";
+    } else if (queryLower.includes("last year")) {
+      period = "last year";
+    }
+    
+    try {
+      // Get date range for the period
+      const dateRange = getDateRange(period);
+      
+      if (!dateRange) {
+        return `I couldn't determine the time period for your analysis. Please specify a time period like "this month" or "last week".`;
+      }
+      
+      // Query expenses for this period
+      const { data: expenses, error } = await supabase
+        .from("expenses")
+        .select("*")
+        .eq("user_id", user_id)
+        .gte("date", dateRange.start_date)
+        .lte("date", dateRange.end_date);
+        
+      if (error) {
+        console.error("Error fetching expenses for analysis:", error);
+        return "I encountered an error analyzing your spending habits. Please try again later.";
+      }
+      
+      if (!expenses || expenses.length === 0) {
+        return `I don't see any expenses recorded for ${period}. Once you add some expenses, I can analyze your spending habits.`;
+      }
+      
+      // Analyze the spending data
+      const categorySummary = expenses.reduce((summary, exp) => {
+        const cat = exp.category || 'uncategorized';
+        if (!summary[cat]) {
+          summary[cat] = {
+            total: 0,
+            count: 0,
+            expenses: []
+          };
+        }
+        summary[cat].total += exp.amount;
+        summary[cat].count += 1;
+        summary[cat].expenses.push(exp);
+        return summary;
+      }, {});
+      
+      // Calculate total spending
+      const totalSpending = Object.values(categorySummary).reduce((sum, catData) => sum + catData.total, 0);
+      
+      // Sort categories by spending amount
+      const sortedCategories = Object.entries(categorySummary)
+        .sort((a, b) => b[1].total - a[1].total)
+        .map(([category, data]) => {
+          return {
+            category,
+            total: data.total,
+            count: data.count,
+            percentage: (data.total / totalSpending * 100).toFixed(1)
+          };
+        });
+      
+      // Get the most common currency
+      const currencyCounts = expenses.reduce((acc, exp) => {
+        const curr = exp.currency || 'unknown';
+        acc[curr] = (acc[curr] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const currency = Object.entries(currencyCounts)
+        .sort((a, b) => b[1] - a[1])[0][0];
+      
+      // Format response based on query type
+      let formattedResponse = "";
+      
+      if (queryLower.includes("top spending") || queryLower.includes("spend most on")) {
+        // Top spending categories
+        formattedResponse = `📊 Your top spending categories for ${period}:\n\n`;
+        
+        sortedCategories.slice(0, 3).forEach((cat, index) => {
+          formattedResponse += `${index + 1}. ${cat.category}: ${cat.total} ${currency} (${cat.percentage}% of total)\n`;
+        });
+        
+        formattedResponse += `\nTotal spending: ${totalSpending} ${currency} across ${expenses.length} expenses`;
+      } else {
+        // General spending breakdown
+        formattedResponse = `📊 Your spending breakdown for ${period}:\n\n`;
+        
+        sortedCategories.forEach((cat) => {
+          formattedResponse += `• ${cat.category}: ${cat.total} ${currency} (${cat.percentage}%)\n`;
+        });
+        
+        // Add insights
+        formattedResponse += `\n💰 Insights:\n`;
+        
+        // Highest spending category
+        formattedResponse += `• Your highest spending category is ${sortedCategories[0].category} at ${sortedCategories[0].percentage}% of your total\n`;
+        
+        // Category with most transactions
+        const mostFrequentCategory = Object.entries(categorySummary)
+          .sort((a, b) => b[1].count - a[1].count)[0][0];
+          
+        formattedResponse += `• You make the most frequent purchases in ${mostFrequentCategory}\n`;
+        
+        // Total spending
+        formattedResponse += `• Total spending: ${totalSpending} ${currency} across ${expenses.length} expenses`;
+      }
+      
+      updateConversationHistory(user_id, userQuery, formattedResponse);
+      return formattedResponse;
+    } catch (error) {
+      console.error("Error in spending analysis:", error);
+      return "I encountered an error analyzing your spending habits. Please try again later.";
     }
   }
 
@@ -851,11 +1446,23 @@ Your expense has been recorded in the database.`;
   const chat = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   const systemPrompt = getSystemPrompt() + `\n\nIMPORTANT: For queries like "Show my spending this month" or "Show my expenses this month", always use getTotalExpense with period="this month" parameter. For "Show my expenses today" or "today's expenses", use period="today". Always use the period parameter when time references are detected.`;
   
+  // Get and format conversation history for context
+  const history = getUserHistory(user_id);
+  let conversationContext = "";
+  
+  if (history.length > 0) {
+    conversationContext = "\n\nPrevious conversation:\n";
+    history.forEach(item => {
+      conversationContext += `User: ${item.query}\nAssistant: ${item.response}\n`;
+    });
+    console.log("Adding conversation history to prompt");
+  }
+  
   const chatResponse = await chat.generateContent({
     contents: [{
       role: "user",
       parts: [{
-        text: systemPrompt + "\nUser: " + userQuery
+        text: systemPrompt + conversationContext + "\nUser: " + userQuery
       }]
     }],
   });
@@ -937,11 +1544,11 @@ Your expense has been recorded in the database.`;
           const params = { period: period };
           
           const categoryMatches = {
-            food: ["food", "meal", "grocery", "restaurant"], 
-            housing: ["housing", "home", "rent", "utility"],
-            transportation: ["transportation", "travel", "gas", "uber"],
-            entertainment: ["entertainment", "movie", "music", "game"],
-            others: ["others", "other", "misc", "miscellaneous"]
+            food: ["food", "meal", "grocery", "restaurant", "lunch", "dinner", "breakfast", "protein", "supplement", "lunchbox", "kitchenware", "cooking"], 
+            housing: ["housing", "home", "rent", "utility", "furniture"],
+            transportation: ["transportation", "travel", "gas", "uber", "taxi", "bus", "train"],
+            entertainment: ["entertainment", "movie", "music", "game", "concert"],
+            others: ["others", "other", "misc", "miscellaneous", "medicine", "education"]
           };
           
           // Extract category if mentioned
@@ -968,11 +1575,11 @@ Your expense has been recorded in the database.`;
         
         // Check for category filter
         const categoryMatches = {
-          food: ["food", "meal", "grocery", "restaurant"], 
-          housing: ["housing", "home", "rent", "utility"],
-          transportation: ["transportation", "travel", "gas", "uber"],
-          entertainment: ["entertainment", "movie", "music", "game"],
-          others: ["others", "other", "misc", "miscellaneous"]
+          food: ["food", "meal", "grocery", "restaurant", "lunch", "dinner", "breakfast", "protein", "supplement", "lunchbox", "kitchenware", "cooking"], 
+          housing: ["housing", "home", "rent", "utility", "furniture"],
+          transportation: ["transportation", "travel", "gas", "uber", "taxi", "bus", "train"],
+          entertainment: ["entertainment", "movie", "music", "game", "concert"],
+          others: ["others", "other", "misc", "miscellaneous", "medicine", "education"]
         };
         
         // Extract category if mentioned
@@ -1107,6 +1714,7 @@ Your expense has been recorded in the database.`;
       
       logSystemFormat('process', "Expense added successfully");
       logSystemFormat('return', result.message);
+      updateConversationHistory(user_id, userQuery, result.message);
       return result.message;
     }
     else if (responseJSON.function === "listExpenses") {
@@ -1123,6 +1731,7 @@ Your expense has been recorded in the database.`;
         const response = "📭 No expenses found for the specified criteria.";
         logSystemFormat('process', "No matching expenses found");
         logSystemFormat('return', response);
+        updateConversationHistory(user_id, userQuery, response);
         return response;
       }
       
@@ -1175,7 +1784,9 @@ Your expense has been recorded in the database.`;
       const summaryTitle = `\n💰 Summary (Total: ${totalAmount} ${currency}):\n`;
       
       logSystemFormat('return', "list of expenses with summary");
-      return title + expensesList + summaryTitle + summaryLines;
+      response = title + expensesList + summaryTitle + summaryLines;
+      updateConversationHistory(user_id, userQuery, response);
+      return response;
     }
     else if (responseJSON.function === "getTotalExpense") {
       logSystemFormat('process', "request for expense totals");
@@ -1185,6 +1796,213 @@ Your expense has been recorded in the database.`;
       try {
         const result = await getTotalExpense(responseJSON.params || {}, user_id);
         
+        // Check if this is a spending analysis query
+        const isSpendingAnalysis = !responseJSON.params?.category && 
+          (queryLower.includes("top spending") || 
+           queryLower.includes("spending habit") || 
+           queryLower.includes("spending pattern") || 
+           queryLower.includes("spend most") || 
+           queryLower.includes("where") && queryLower.includes("money") && 
+              (queryLower.includes("go") || queryLower.includes("went") || queryLower.includes("goes")));
+        
+        // Format for category comparison
+        const isCategoryComparison = queryLower.includes("compare") || 
+          queryLower.includes("vs") || 
+          queryLower.includes("versus") ||
+          (queryLower.includes(" and ") && (
+            queryLower.includes("expense") || 
+            queryLower.includes("food") || 
+            queryLower.includes("transportation") || 
+            queryLower.includes("transport") || 
+            queryLower.includes("housing") || 
+            queryLower.includes("entertainment")
+          )) ||
+          (queryLower.includes("between") && (
+            queryLower.includes("food") || 
+            queryLower.includes("housing") || 
+            queryLower.includes("transportation") || 
+            queryLower.includes("transport") || 
+            queryLower.includes("entertainment") || 
+            queryLower.includes("others")
+          ));
+        
+        // Check if we're comparing with a previous period
+        const isPeriodComparison = queryLower.includes("more than") || 
+          queryLower.includes("less than") || 
+          queryLower.includes("compared to");
+        
+        if (isSpendingAnalysis && result.categoryData) {
+          // Format a spending analysis response
+          let response = `📊 Your spending breakdown`;
+          
+          // Add period information if available
+          if (responseJSON.params?.period) {
+            response += ` for ${responseJSON.params.period}`;
+          } else if (responseJSON.params?.month && responseJSON.params?.year) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                              'July', 'August', 'September', 'October', 'November', 'December'];
+            const monthIndex = parseInt(responseJSON.params.month, 10) - 1;
+            const monthName = monthNames[monthIndex];
+            response += ` in ${monthName} ${responseJSON.params.year}`;
+          } else if (responseJSON.params?.year) {
+            response += ` in ${responseJSON.params.year}`;
+          }
+          
+          response += `:\n\n`;
+          
+          // Get top categories (up to 5)
+          const topCategories = Object.entries(result.categoryData)
+            .slice(0, 5)
+            .map(([category, data]) => {
+              return `• ${category}: ${data.total} ${result.currency} (${data.percentage.toFixed(1)}% of total)`;
+            });
+          
+          response += topCategories.join('\n');
+          
+          // Add a summary
+          response += `\n\n💰 Total: ${result.total} ${result.currency} across ${result.count} expenses`;
+          
+          // Add insights section if we have enough data
+          if (result.count > 3) {
+            response += `\n\n✨ Insights:`;
+            
+            // Top spending category
+            const topCategory = Object.keys(result.categoryData)[0];
+            response += `\n• Your highest spending is in ${topCategory}`;
+            
+            // Most frequent category
+            const mostFrequentCategory = Object.entries(result.categoryData)
+              .sort((a, b) => b[1].count - a[1].count)[0][0];
+            if (mostFrequentCategory !== topCategory) {
+              response += `\n• You make purchases most frequently in ${mostFrequentCategory}`;
+            }
+          }
+          
+          logSystemFormat('return', "spending analysis");
+          updateConversationHistory(user_id, userQuery, response);
+          return response;
+        }
+        else if (isCategoryComparison && responseJSON.params?.category) {
+          // Cache this result and respond after we fetch the second category
+          const firstCategory = responseJSON.params.category;
+          const firstCategoryAmount = result.total;
+          const firstCategoryCount = result.count;
+          
+          // Extract potential second categories from the query
+          let potentialCategories = [];
+          const categoryMatches = {
+            food: ["food", "meal", "grocery", "restaurant", "lunch", "dinner", "breakfast", "protein", "supplement", "lunchbox", "kitchenware", "cooking"], 
+            housing: ["housing", "home", "rent", "utility", "furniture"],
+            transportation: ["transportation", "transport", "travel", "gas", "uber", "taxi", "bus", "train"],
+            entertainment: ["entertainment", "movie", "music", "game", "concert"],
+            others: ["others", "other", "misc", "miscellaneous", "medicine", "education"]
+          };
+          
+          // Find all category mentions in the query
+          for (const [category, keywords] of Object.entries(categoryMatches)) {
+            if (category !== firstCategory && keywords.some(keyword => queryLower.includes(keyword))) {
+              potentialCategories.push(category);
+            }
+          }
+          
+          // Use the first potential category that's not the same as the first category
+          const secondCategory = potentialCategories.length > 0 ? potentialCategories[0] : null;
+          
+          if (secondCategory) {
+            try {
+              // Get the results for the second category
+              const secondParams = { ...responseJSON.params, category: secondCategory };
+              const secondResult = await getTotalExpense(secondParams, user_id);
+              
+              // Format the comparison response
+              let response = `📊 Spending comparison for ${responseJSON.params.period || 'all time'}:\n\n`;
+              
+              response += `• ${firstCategory}: ${firstCategoryAmount} ${result.currency} (${firstCategoryCount} transactions)\n`;
+              response += `• ${secondCategory}: ${secondResult.total} ${secondResult.currency} (${secondResult.count} transactions)\n\n`;
+              
+              // Add a comparison insight
+              if (firstCategoryAmount === 0 && secondResult.total === 0) {
+                response += `You don't have any recorded expenses for either category.`;
+              } else if (firstCategoryAmount === 0) {
+                response += `You only have expenses in ${secondCategory}, with no recorded expenses for ${firstCategory}.`;
+              } else if (secondResult.total === 0) {
+                response += `You only have expenses in ${firstCategory}, with no recorded expenses for ${secondCategory}.`;
+              } else {
+                const difference = Math.abs(firstCategoryAmount - secondResult.total);
+                const percentDiff = ((difference / Math.min(firstCategoryAmount, secondResult.total)) * 100).toFixed(1);
+                
+                if (firstCategoryAmount > secondResult.total) {
+                  response += `You spend ${percentDiff}% more on ${firstCategory} than on ${secondCategory}.`;
+                } else if (firstCategoryAmount < secondResult.total) {
+                  response += `You spend ${percentDiff}% more on ${secondCategory} than on ${firstCategory}.`;
+                } else {
+                  response += `You spend exactly the same amount on ${firstCategory} and ${secondCategory}.`;
+                }
+              }
+              
+              logSystemFormat('return', "category comparison");
+              updateConversationHistory(user_id, userQuery, response);
+              return response;
+            } catch (error) {
+              console.error("Error in category comparison:", error);
+            }
+          }
+        }
+        else if (isPeriodComparison && responseJSON.params?.period && responseJSON.params?.category) {
+          // This is a "more than/less than" comparison - we need to compare with previous period
+          const currentPeriod = responseJSON.params.period;
+          const category = responseJSON.params.category;
+          let previousPeriod;
+          
+          // Determine the previous period
+          if (currentPeriod === "this month") {
+            previousPeriod = "last month";
+          } else if (currentPeriod === "this week") {
+            previousPeriod = "last week";
+          } else if (currentPeriod === "today") {
+            previousPeriod = "yesterday";
+          } else if (currentPeriod === "this year") {
+            previousPeriod = "last year";
+          }
+          
+          if (previousPeriod) {
+            try {
+              // Get results for the previous period
+              const previousParams = { category, period: previousPeriod };
+              const previousResult = await getTotalExpense(previousParams, user_id);
+              
+              // Format the period comparison response
+              let response = `📊 ${category} spending comparison:\n\n`;
+              
+              response += `• ${currentPeriod}: ${result.total} ${result.currency} (${result.count} transactions)\n`;
+              response += `• ${previousPeriod}: ${previousResult.total} ${previousResult.currency} (${previousResult.count} transactions)\n\n`;
+              
+              // Add a comparison insight
+              if (previousResult.total === 0) {
+                response += `You didn't have any ${category} expenses in ${previousPeriod}.`;
+              } else {
+                const difference = Math.abs(result.total - previousResult.total);
+                const percentDiff = ((difference / previousResult.total) * 100).toFixed(1);
+                
+                if (result.total > previousResult.total) {
+                  response += `Your ${category} spending increased by ${percentDiff}% compared to ${previousPeriod}.`;
+                } else if (result.total < previousResult.total) {
+                  response += `Your ${category} spending decreased by ${percentDiff}% compared to ${previousPeriod}.`;
+                } else {
+                  response += `Your ${category} spending is exactly the same as ${previousPeriod}.`;
+                }
+              }
+              
+              logSystemFormat('return', "period comparison");
+              updateConversationHistory(user_id, userQuery, response);
+              return response;
+            } catch (error) {
+              console.error("Error in period comparison:", error);
+            }
+          }
+        }
+        
+        // Default total expense response (if not a special case)
         let response = `💰 Total`;
         if (responseJSON.params?.category) response += ` ${responseJSON.params.category}`;
         response += ` expenses`;
@@ -1205,6 +2023,7 @@ Your expense has been recorded in the database.`;
         response += `: ${result.total} ${result.currency} (${result.count} expenses)`;
         
         logSystemFormat('return', "expense total summary");
+        updateConversationHistory(user_id, userQuery, response);
         return response;
   } catch (error) {
         console.error("Error calculating expense totals:", error);
@@ -1230,23 +2049,98 @@ For adding expenses, please include:
 For example: "Add food expense 25 USD"`;
 
         logSystemFormat('return', "missing information guidance");
+        updateConversationHistory(user_id, userQuery, helpMessage);
         return helpMessage;
       }
       
       logSystemFormat('return', "error message from AI");
-      return `❓ ${responseJSON.error}`;
+      response = `❓ ${responseJSON.error}`;
+      updateConversationHistory(user_id, userQuery, response);
+      return response;
     }
     else if (responseJSON.function === "chat") {
       // This is a general chat response
       logSystemFormat('process', "general chat response");
       logSystemFormat('action', { function: 'chat' });
       logSystemFormat('return', "conversational response");
-      return responseJSON.output;
+      
+      // Check if the chat response is unhelpful
+      if (responseJSON.output && 
+          (responseJSON.output.toLowerCase().includes("couldn't understand") ||
+           responseJSON.output.toLowerCase().includes("try rephrasing") ||
+           responseJSON.output.toLowerCase().includes("don't understand"))) {
+        
+        console.log("Received unhelpful chat response, providing a better one");
+        
+        // Extract potential keywords from the query
+        const keywords = queryLower
+          .replace(/[.,?!;:'"]/g, '')
+          .split(' ')
+          .filter(word => word.length > 2);
+        
+        const expenseKeywords = ['spent', 'buy', 'bought', 'purchase', 'cost', 'expense', 'payment', 'pay'];
+        const reportKeywords = ['show', 'list', 'view', 'see', 'display', 'report', 'summary', 'total'];
+        
+        // Check if query might be expense-related
+        if (keywords.some(word => expenseKeywords.includes(word))) {
+          response = createExpensePrompt("It looks like you want to add an expense.");
+          updateConversationHistory(user_id, userQuery, response);
+          return response;
+        }
+        
+        // Check if query might be report-related
+        if (keywords.some(word => reportKeywords.includes(word))) {
+          response = `It looks like you want to see your expenses. You can try:
+- "Show my expenses today"
+- "List my food expenses this month"
+- "Total transportation expenses last week"`;
+          updateConversationHistory(user_id, userQuery, response);
+          return response;
+        }
+        
+        // General fallback
+        response = `I'm not quite sure what you're asking. You can try:
+- Adding an expense: "I spent 50 on dinner"
+- Viewing expenses: "Show my expenses for this month"
+- Getting totals: "How much did I spend on food?"
+
+Or type "help" to see more examples.`;
+        updateConversationHistory(user_id, userQuery, response);
+        return response;
+      }
+      
+      response = responseJSON.output;
+      updateConversationHistory(user_id, userQuery, response);
+      return response;
     }
 
     // Default response for any other case
     const defaultResponse = `🤖 ${responseJSON.output || "I couldn't understand your request. Please try rephrasing or provide more details."}`;
     logSystemFormat('return', "default response");
+    
+    // Special handling for "I couldn't understand" responses - try to be more helpful
+    if (defaultResponse.includes("I couldn't understand your request") || 
+        defaultResponse.includes("try rephrasing")) {
+      // This is a fallback for when the model fails to understand
+      console.log("AI model failed to understand the query, using fallback response");
+      
+      // If query is short (less than 5 words), it's likely a simple question
+      const wordCount = queryLower.split(/\s+/).filter(word => word.length > 0).length;
+      
+      if (wordCount < 5) {
+        response = `I'm not sure I understood that correctly. You can ask me about:
+- Adding expenses (e.g., "I spent $20 on lunch")
+- Viewing expenses (e.g., "Show my expenses for this month")
+- Getting summaries (e.g., "How much did I spend on food?")
+
+Or type "help" to see more examples of what I can do.`;
+        
+        updateConversationHistory(user_id, userQuery, response);
+        return response;
+      }
+    }
+    
+    updateConversationHistory(user_id, userQuery, defaultResponse);
     return defaultResponse;
   } catch (error) {
     console.error("Error processing AI response:", error);
@@ -1262,11 +2156,14 @@ For example: "Add food expense 25 USD"`;
       
       const errorPrompt = createExpensePrompt();
       logSystemFormat('return', errorPrompt);
+      updateConversationHistory(user_id, userQuery, errorPrompt);
       return errorPrompt;
     }
     
     logSystemFormat('return', "general error message");
-    return `I encountered an issue processing your request. Please try adding your expense with more details, such as "Add housing expense 500 INR" or "I spent 200 INR on groceries."`;
+    response = `I encountered an issue processing your request. Please try adding your expense with more details, such as "Add housing expense 500 INR" or "I spent 200 INR on groceries."`;
+    updateConversationHistory(user_id, userQuery, response);
+    return response;
   }
 };
 
