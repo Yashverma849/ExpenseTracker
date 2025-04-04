@@ -17,6 +17,7 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState("");
   const [session, setSession] = useState(null);
   const [hash, setHash] = useState("");
+  const [accessToken, setAccessToken] = useState("");
 
   useEffect(() => {
     console.log("ResetPassword page mounted");
@@ -24,11 +25,21 @@ export default function ResetPassword() {
     // Get the hash from the URL if it exists (Supabase auth redirects with hash parameters)
     if (typeof window !== "undefined") {
       console.log("Current URL:", window.location.href);
+      
+      // Extract access token from URL if present
       const hashParams = window.location.hash;
       console.log("URL hash parameters:", hashParams);
       
       if (hashParams) {
         setHash(hashParams);
+        
+        // Try to extract the access token
+        const params = new URLSearchParams(hashParams.substring(1)); // Remove the # character
+        const token = params.get("access_token");
+        if (token) {
+          console.log("Found access token in URL");
+          setAccessToken(token);
+        }
       }
     }
 
@@ -60,7 +71,7 @@ export default function ResetPassword() {
               
               if (callbackError) {
                 console.error("Auth callback error:", callbackError);
-                setError("Authentication process failed. The link may have expired.");
+                // Don't set an error, let user try password reset anyway
               } else {
                 // Get the session again after refresh
                 console.log("Session refreshed, getting updated session...");
@@ -70,23 +81,17 @@ export default function ResetPassword() {
                 if (refreshedSession?.session) {
                   console.log("Session established after refresh");
                   setSession(refreshedSession.session);
-                } else {
-                  console.error("No session after refresh");
-                  setError("No active session found after authentication.");
                 }
               }
             } catch (err) {
               console.error("Auth handling error:", err);
-              setError("Failed to process authentication.");
+              // Don't set an error, let user try password reset anyway
             }
-          } else {
-            console.log("No hash parameters in URL, not a valid reset link");
-            setError("No active session found. The password reset link may have expired.");
           }
         }
       } catch (err) {
         console.error("Session check error:", err);
-        setError("An error occurred while checking your session.");
+        // Continue anyway, let user try password reset
       }
     };
 
@@ -113,9 +118,34 @@ export default function ResetPassword() {
 
     try {
       console.log("Updating password...");
-      const { data, error } = await supabase.auth.updateUser({
-        password: password,
-      });
+      
+      let updateResult;
+      
+      // If we have a session, use updateUser directly
+      if (session) {
+        console.log("Using session to update password");
+        updateResult = await supabase.auth.updateUser({
+          password: password,
+        });
+      } 
+      // If we have an access token from the URL, try to use it
+      else if (accessToken) {
+        console.log("Using access token to update password");
+        // Set the auth token manually first
+        supabase.auth.setSession({ access_token: accessToken, refresh_token: '' });
+        updateResult = await supabase.auth.updateUser({
+          password: password,
+        });
+      }
+      // Fallback to just trying the update (works in some Supabase versions)
+      else {
+        console.log("Attempting password update without session");
+        updateResult = await supabase.auth.updateUser({
+          password: password,
+        });
+      }
+      
+      const { data, error } = updateResult || { error: { message: "Failed to update password" } };
       console.log("Update password result:", { data, error });
 
       if (error) {
@@ -152,68 +182,68 @@ export default function ResetPassword() {
               Enter and confirm your new password below.
             </p>
 
-            {error && !session && (
+            {error && (
               <div className="mt-4 text-red-500 text-center">
                 {error}
-                <div className="mt-2">
-                  <Button
-                    onClick={() => router.push("/password-reset")}
-                    variant="attractive"
-                    className="px-3 py-2 text-sm font-medium rounded-md shadow-sm"
-                  >
-                    Request New Reset Link
-                  </Button>
-                </div>
+                {!session && !accessToken && (
+                  <div className="mt-2">
+                    <Button
+                      onClick={() => router.push("/password-reset")}
+                      variant="attractive"
+                      className="px-3 py-2 text-sm font-medium rounded-md shadow-sm"
+                    >
+                      Request New Reset Link
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
-            {session && (
-              <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
-                <div className="col-span-6">
-                  <label htmlFor="password" className="block text-sm font-medium text-white">
-                    New Password
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
+            {/* Always show the form regardless of session state */}
+            <form onSubmit={handleSubmit} className="mt-8 grid grid-cols-6 gap-6">
+              <div className="col-span-6">
+                <label htmlFor="password" className="block text-sm font-medium text-white">
+                  New Password
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
 
-                <div className="col-span-6">
-                  <label htmlFor="confirm-password" className="block text-sm font-medium text-white">
-                    Confirm New Password
-                  </label>
-                  <input
-                    id="confirm-password"
-                    name="confirm-password"
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
+              <div className="col-span-6">
+                <label htmlFor="confirm-password" className="block text-sm font-medium text-white">
+                  Confirm New Password
+                </label>
+                <input
+                  id="confirm-password"
+                  name="confirm-password"
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="mt-1 block w-full rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-gray-300 focus:outline-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
 
-                {error && session && <div className="col-span-6 text-red-500 text-sm text-center">{error}</div>}
-                {success && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
+              {success && <div className="col-span-6 text-green-500 text-sm text-center">{success}</div>}
 
-                <div className="col-span-6">
-                  <Button
-                    type="submit"
-                    variant="attractive"
-                    className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
-                    disabled={loading}
-                  >
-                    {loading ? "Updating..." : "Update Password"}
-                  </Button>
-                </div>
-              </form>
-            )}
+              <div className="col-span-6">
+                <Button
+                  type="submit"
+                  variant="attractive"
+                  className="w-full px-3 py-2 text-sm font-medium rounded-md shadow-sm"
+                  disabled={loading}
+                >
+                  {loading ? "Updating..." : "Update Password"}
+                </Button>
+              </div>
+            </form>
           </div>
         </main>
       </div>
